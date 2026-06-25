@@ -1,0 +1,20 @@
+Termux에서 torch가 있으면 학습 가능하지만 pip install torch가 실패할 수 있어.
+
+먼저 시도:
+  pkg update
+  pkg search torch
+  pkg install python-torch
+
+안 되면 proot Ubuntu:
+  pkg install proot-distro
+  proot-distro install ubuntu
+  proot-distro login ubuntu
+  apt update
+  apt install python3 python3-pip
+  python3 -m pip install torch
+
+Torch 없이 실행:
+  python run_hgai.py --lite
+
+폰 학습 추천:
+  python run_hgai.py --retrain --preset phone --steps 500 --threads 2
