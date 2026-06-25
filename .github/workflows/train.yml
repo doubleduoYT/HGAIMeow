@@ -1,0 +1,46 @@
+name: Train HGAI
+
+on:
+  workflow_dispatch:
+    inputs:
+      preset:
+        description: "Model preset"
+        required: true
+        default: "mid-safe"
+      steps:
+        description: "Training steps"
+        required: true
+        default: "3000"
+  push:
+    paths:
+      - "train.txt"
+      - "run_hgai.py"
+      - ".github/workflows/train.yml"
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch
+      - name: Train
+        run: |
+          python run_hgai.py --retrain --preset ${{ github.event.inputs.preset || 'mid-safe' }} --steps ${{ github.event.inputs.steps || '3000' }} --threads 2
+      - name: Smoke test
+        run: |
+          python run_hgai.py --once "윈도우가 뭐야" --preset ${{ github.event.inputs.preset || 'mid-safe' }}
+          python run_hgai.py --once "10000×10000" --preset ${{ github.event.inputs.preset || 'mid-safe' }}
+      - name: Upload model
+        uses: actions/upload-artifact@v4
+        with:
+          name: hgai-model-${{ github.event.inputs.preset || 'mid-safe' }}
+          path: |
+            hgai_model.pth
+            train.txt
+            run_hgai.py
