@@ -1,7 +1,14 @@
 {
-  "old_pairs": 9567,
-  "cleaned_old_pairs": 8597,
-  "new_pairs": 9345,
-  "unique_questions": 7884,
-  "removed_noise_estimate": 970
+  "version": "v6-hybrid-token",
+  "pairs": 10731,
+  "unique_questions": 9248,
+  "sha256": "f58a5e59f7b839893ea99810c18bcab91d2359c19dbbb14e02552b9a4bd9d97f",
+  "model_included": false,
+  "notes": [
+    "v5 데이터 유지/정리",
+    "필수 퍼리/HG Company/덥듀/LLM/GitHub Q&A 추가",
+    "토큰 기반 Transformer용 실행 코드 포함",
+    "검색/룰/계산/메모리 하이브리드",
+    "GitHub Actions 학습 자동화 포함"
+  ]
 }

@@ -1,4 +1,4 @@
-name: Train HGAI
+name: Train HGAI v6
 
 on:
   workflow_dispatch:
@@ -7,40 +7,52 @@ on:
         description: "Model preset"
         required: true
         default: "mid-safe"
+        type: choice
+        options:
+          - phone
+          - mid-safe
+          - mid-plus
+          - pc
       steps:
         description: "Training steps"
         required: true
-        default: "3000"
+        default: "6000"
   push:
     paths:
       - "train.txt"
+      - "knowledge.json"
       - "run_hgai.py"
       - ".github/workflows/train.yml"
 
 jobs:
   train:
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - name: Install deps
+          python-version: "3.12"
+      - name: Install PyTorch CPU
         run: |
           python -m pip install --upgrade pip
-          pip install torch
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Dataset validation
+        run: |
+          python run_hgai.py --lite --validate
       - name: Train
         run: |
-          python run_hgai.py --retrain --preset ${{ github.event.inputs.preset || 'mid-safe' }} --steps ${{ github.event.inputs.steps || '3000' }} --threads 2
-      - name: Smoke test
+          PRESET="${{ github.event.inputs.preset || 'mid-safe' }}"
+          STEPS="${{ github.event.inputs.steps || '6000' }}"
+          python run_hgai.py --retrain --preset "$PRESET" --steps "$STEPS" --threads 2 --model-file hgai_model.pth
+      - name: Benchmark
         run: |
-          python run_hgai.py --once "윈도우가 뭐야" --preset ${{ github.event.inputs.preset || 'mid-safe' }}
-          python run_hgai.py --once "10000×10000" --preset ${{ github.event.inputs.preset || 'mid-safe' }}
-      - name: Upload model
-        uses: actions/upload-artifact@v4
+          python run_hgai.py --preset "${{ github.event.inputs.preset || 'mid-safe' }}" --benchmark --model-file hgai_model.pth | tee benchmark.txt
+      - name: Package artifact
+        run: |
+          zip -r hgai-v6-model.zip run_hgai.py train.txt knowledge.json README.md TERMUX_TORCH_GUIDE.txt DATASET_REPORT.json hgai_model.pth benchmark.txt
+      - uses: actions/upload-artifact@v4
         with:
-          name: hgai-model-${{ github.event.inputs.preset || 'mid-safe' }}
-          path: |
-            hgai_model.pth
-            train.txt
-            run_hgai.py
+          name: hgai-v6-model-${{ github.event.inputs.preset || 'mid-safe' }}
+          path: hgai-v6-model.zip
+          retention-days: 30
