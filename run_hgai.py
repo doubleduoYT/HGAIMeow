@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# HGAI v7 Hybrid-Core
+# HGAI v8 Hybrid-Engine
 # - Exact/keyword/fuzzy search + calculator + memory + token-based Transformer
 # - Keeps train.txt compatibility: 질문=답변
 # - Default uses Torch when available; fallback to Lite when unavailable
@@ -31,7 +31,7 @@ PRESETS = {
     "pc":        {"block_size": 192, "batch_size": 8,  "n_embd": 256, "n_head": 8, "n_layer": 4, "dropout": 0.12, "max_vocab": 20000},
 }
 
-parser = argparse.ArgumentParser(description="HGAI v7 hybrid-core Korean cat chatbot")
+parser = argparse.ArgumentParser(description="HGAI v8 hybrid-engine Korean cat chatbot")
 parser.add_argument("--train-file", default=str(DEFAULT_TRAIN_FILE))
 parser.add_argument("--model-file", default=str(DEFAULT_MODEL_FILE))
 parser.add_argument("--knowledge-file", default=str(DEFAULT_KNOWLEDGE_FILE))
@@ -92,7 +92,7 @@ pkg install python python-torch
 python -c "import torch; print(torch.__version__)"
 
 [GitHub Actions]
-저장소에 push하면 .github/workflows/train.yml 이 자동 학습을 돌리고 artifact로 v7 모델을 올린다냥.
+저장소에 push하면 .github/workflows/train.yml 이 자동 학습을 돌리고 artifact로 v8 모델을 올린다냥.
 
 [폰 실행]
 python run_hgai.py --preset mid-safe
@@ -159,7 +159,13 @@ SYNONYMS = [
     ("에이아이","ai"),("인공지능","ai"),("ai","ai"),("램","ram"),("ram","ram"),
     ("퍼리","furry"),("수인","furry"),("furry","furry"),
     ("hg company","hgcompany"),("hg사","hgcompany"),("hg 회사","hgcompany"),("hg컴퍼니","hgcompany"),("hgcompany","hgcompany"),
-    ("덥듀","doubleduo"),("doubleduo","doubleduo"),("hg ai","hgai"),("hgai","hgai"),("깃허브가뮈야","github"),("뮈야","뭐야"),("뭐샤","뭐야"),("머야","뭐야"),("뭔데","뭐야"),
+    ("덥듀","doubleduo"),("doubleduo","doubleduo"),("hg ai","hgai"),("hgai","hgai"),
+    ("챗지피티","chatgpt"),("챗gpt","chatgpt"),("chatgpt","chatgpt"),("openai","openai"),
+    ("카카오톡","kakaotalk"),("카톡","kakaotalk"),("카카오 톡","kakaotalk"),
+    ("디스코드","discord"),("디코","discord"),("discord","discord"),
+    ("마이크로소프트","microsoft"),("마소","microsoft"),("microsoft","microsoft"),("ms","microsoft"),
+    ("리누스 토르발스","linustorvalds"),("리눅스만든사람","linuxcreator"),("리눅스창시자","linuxcreator"),
+    ("깃허브가뮈야","github"),("뮈야","뭐야"),("뭐샤","뭐야"),("머야","뭐야"),("뭔데","뭐야"),
 ]
 STRONG_TERMS = sorted({b for _,b in SYNONYMS} | {"api","json","html","css","java","javascript","torch","pytorch","git","cpu","gpu","os","apk","zip"}, key=len, reverse=True)
 
@@ -188,7 +194,7 @@ def words_for_terms(s):
 def looks_like_question(s):
     t=clean_text(s)
     nt=normalize(t)
-    return any(k in t for k in ["뭐야","뭐임","뜻","설명","알려","대해","란","뭐냐","뭔데","머야","뭐샤","뮈야","무엇","어떤"]) or any(k in nt for k in ["뭐야","뜻","설명","알려","대해","란"] )
+    return any(k in t for k in ["뭐야","뭐임","뜻","설명","알려","대해","란","뭐냐","뭔데","머야","뭐샤","뮈야","무엇","어떤","누가","만든 사람","창시자","개발자"]) or any(k in nt for k in ["뭐야","뜻","설명","알려","대해","란"] )
 
 def append_learn_line(line):
     if not line or "=" not in line:
@@ -288,6 +294,130 @@ def calc_reply(user):
         if 0<=n<=100: return f"계산하면 {math.factorial(n)}다냥 :3"
     return None
 
+
+# ---------- v8 Korean number / sentence math / coder ----------
+KNUM_DIGIT = {
+    "영":0,"공":0,"빵":0,"일":1,"하나":1,"한":1,"이":2,"둘":2,"두":2,"삼":3,"셋":3,"세":3,
+    "사":4,"넷":4,"네":4,"오":5,"다섯":5,"육":6,"륙":6,"여섯":6,"칠":7,"일곱":7,
+    "팔":8,"여덟":8,"구":9,"아홉":9
+}
+KNUM_SMALL = {"십":10,"백":100,"천":1000}
+KNUM_BIG = {"만":10000,"억":100000000}
+
+def korean_num_to_int(s):
+    s = str(s).strip()
+    if not s:
+        return None
+    s = s.replace(",", "").replace("개", "").replace("명", "").replace("원", "").strip()
+    if re.fullmatch(r"-?\d+", s):
+        return int(s)
+    if s in KNUM_DIGIT:
+        return KNUM_DIGIT[s]
+    total = 0
+    section = 0
+    num = 0
+    i = 0
+    while i < len(s):
+        matched = False
+        # multi-char native numbers first
+        for w,v in sorted(KNUM_DIGIT.items(), key=lambda x:-len(x[0])):
+            if s.startswith(w, i):
+                num = v
+                i += len(w)
+                matched = True
+                break
+        if matched:
+            continue
+        ch = s[i]
+        if ch in KNUM_SMALL:
+            unit = KNUM_SMALL[ch]
+            section += (num if num else 1) * unit
+            num = 0
+            i += 1
+            continue
+        if ch in KNUM_BIG:
+            unit = KNUM_BIG[ch]
+            section += num
+            total += (section if section else 1) * unit
+            section = 0
+            num = 0
+            i += 1
+            continue
+        return None
+    return total + section + num
+
+def replace_korean_numbers_in_expr(text):
+    # longer words first so 십만 is converted before 십
+    candidates = sorted(set(list(KNUM_DIGIT.keys()) + list(KNUM_SMALL.keys()) + list(KNUM_BIG.keys()) + [
+        "십만","백만","천만","일만","이만","삼만","사만","오만","육만","칠만","팔만","구만",
+        "오십","백오십","이백","삼백","천","만","십"
+    ]), key=len, reverse=True)
+    out = text
+    for w in candidates:
+        v = korean_num_to_int(w)
+        if v is not None:
+            out = re.sub(rf"(?<![가-힣]){re.escape(w)}(?![가-힣])", str(v), out)
+    return out
+
+def korean_calc_reply(user):
+    t = clean_text(user)
+    if re.search(r"계산\s*(하지마|하지 마|말고|안해|안 해|금지)", t):
+        return None
+    # 일 더하기 일 / 백 더하기 오십 / 십만 곱하기 이
+    pat = r"([0-9,]+|[영공빵일이삼사오육륙칠팔구십백천만억하나둘셋넷다섯여섯일곱여덟아홉한두세네]+)\s*(더하기|플러스|빼기|마이너스|곱하기|나누기|더해|빼|곱해|나눠)\s*([0-9,]+|[영공빵일이삼사오육륙칠팔구십백천만억하나둘셋넷다섯여섯일곱여덟아홉한두세네]+)"
+    m = re.search(pat, t)
+    if not m:
+        return None
+    a = korean_num_to_int(m.group(1)); b = korean_num_to_int(m.group(3)); op = m.group(2)
+    if a is None or b is None:
+        return None
+    if op in ["더하기","플러스","더해"]: v = a + b
+    elif op in ["빼기","마이너스","빼"]: v = a - b
+    elif op in ["곱하기","곱해"]: v = a * b
+    elif op in ["나누기","나눠"]:
+        if b == 0: return "0으로 나눌 수는 없다냥"
+        v = a / b
+        if int(v) == v: v = int(v)
+    else: return None
+    return f"계산하면 {v}다냥 :3"
+
+def sentence_math_reply(user):
+    t = clean_text(user)
+    # A는 n개의 사탕을 B에게 주었어. B는 m개의 사탕을 가지고 있었어. 지금 B는 몇 개?
+    give_pat = r"([가-힣A-Za-z]+)는\s*([0-9,]+|[영공빵일이삼사오육륙칠팔구십백천만억하나둘셋넷다섯여섯일곱여덟아홉한두세네]+)\s*개(?:의)?\s*([가-힣A-Za-z]+)?[을를]?\s*([가-힣A-Za-z]+)에게\s*(?:주었|줬|주엇|주었다|주었어|줬어|주고)"
+    have_pat = r"([가-힣A-Za-z]+)는\s*([0-9,]+|[영공빵일이삼사오육륙칠팔구십백천만억하나둘셋넷다섯여섯일곱여덟아홉한두세네]+)\s*개(?:의)?\s*([가-힣A-Za-z]+)?[을를]?\s*(?:가지고|갖고|있었|있어|있다)"
+    g = re.search(give_pat, t)
+    h = re.search(have_pat, t)
+    if g and h:
+        giver, nraw, obj1, receiver = g.group(1), g.group(2), g.group(3) or "물건", g.group(4)
+        holder, mraw, obj2 = h.group(1), h.group(2), h.group(3) or obj1
+        n = korean_num_to_int(nraw); m = korean_num_to_int(mraw)
+        if n is not None and m is not None and receiver == holder and re.search(r"몇\s*개|얼마", t):
+            return f"{holder}는 원래 {m}개가 있었고 {giver}에게 {n}개를 받았으니까 지금은 {m+n}개다냥 :3"
+    # 사과 5개 중 2개 먹었어. 몇 개 남아?
+    m = re.search(r"([가-힣A-Za-z]+)?\s*([0-9,]+|[영공빵일이삼사오육륙칠팔구십백천만억하나둘셋넷다섯여섯일곱여덟아홉한두세네]+)\s*개\s*중\s*([0-9,]+|[영공빵일이삼사오육륙칠팔구십백천만억하나둘셋넷다섯여섯일곱여덟아홉한두세네]+)\s*개\s*(?:먹|사용|썼|버렸|잃어)", t)
+    if m and re.search(r"몇\s*개|남", t):
+        total = korean_num_to_int(m.group(2)); used = korean_num_to_int(m.group(3)); obj = m.group(1) or "물건"
+        if total is not None and used is not None:
+            return f"{total}개 중 {used}개를 뺐으니까 {total-used}개 남았다냥 :3"
+    return None
+
+def code_reply(user):
+    t = clean_text(user)
+    nt = normalize(t)
+    if "디스코드" in t or "discord" in normalize(t):
+        return None
+    if not (re.search(r"(?<!스)코드", t) or any(k in t for k in ["짜줘", "써줘", "예제", "예시"])):
+        return None
+    wants_python = any(k in nt for k in ["python", "파이썬"]) or "코드" in t
+    if wants_python:
+        if any(k in t for k in ["계산", "더하기", "덧셈"]):
+            return "간단한 파이썬 계산 코드다냥:\n```python\na = int(input('첫 번째 숫자: '))\nb = int(input('두 번째 숫자: '))\nprint('합계:', a + b)\n```"
+        if any(k in t for k in ["봇", "챗봇", "대화"]):
+            return "아주 작은 파이썬 챗봇 예시다냥:\n```python\nwhile True:\n    user = input('너: ')\n    if user == 'exit':\n        break\n    print('HGAI: 안녕이다냥!')\n```"
+        return "간단한 파이썬 코드 예시다냥:\n```python\nprint('안녕냥!')\nfor i in range(3):\n    print('고로롱', i + 1)\n```"
+    return "어떤 언어와 기능이 필요한지 말해주면 코드로 짜보겠다냥"
+
 # ---------- memory / random rules ----------
 def load_memory():
     try: return json.loads(MEMORY_FILE.read_text(encoding="utf-8")) if MEMORY_FILE.exists() else {}
@@ -303,10 +433,18 @@ def rule_reply(user):
         return "알겠다냥 이번엔 계산 안 하겠다냥"
     if is_noise_input(t):
         return "냥? 한 글자나 의미 없는 입력은 어렵다냥 조금 더 말해줘라냥 :3"
-    m=re.search(r"내 이름은\s*([가-힣A-Za-z0-9_\-]{1,20})", t)
+    m=re.search(r"(?:내 이름은|내이름은|나는)\s*([가-힣A-Za-z0-9_\-]{1,20})(?:야|이야|이다)?", t)
     if m:
         mem=load_memory(); mem["user_name"]=m.group(1); save_memory(mem)
         return f"기억했다냥 이제 {m.group(1)}라고 불러주겠다냥 :3"
+    m2=re.search(r"내가 좋아하는\s*([가-힣A-Za-z0-9_\-]{1,20})[은는]?\s*([가-힣A-Za-z0-9_\-]{1,30})(?:야|이야|이다)?", t)
+    if m2:
+        mem=load_memory(); mem.setdefault("likes",{})[m2.group(1)] = m2.group(2); save_memory(mem)
+        return f"기억했다냥 네가 좋아하는 {m2.group(1)}은 {m2.group(2)}다냥 :3"
+    m3=re.search(r"내가 좋아하는\s*([가-힣A-Za-z0-9_\-]{1,20}).*(뭐|기억)", t)
+    if m3:
+        mem=load_memory(); val=mem.get("likes",{}).get(m3.group(1))
+        return f"네가 좋아하는 {m3.group(1)}은 {val}다냥" if val else "아직 그건 못 들었다냥 알려주면 기억하겠다냥"
     if "내이름" in nt and ("뭐" in nt or "기억" in nt):
         name=load_memory().get("user_name")
         return f"네 이름은 {name}다냥 내가 기억하고 있다냥" if name else "아직 이름을 못 들었다냥 알려주면 기억하겠다냥"
@@ -316,6 +454,12 @@ def rule_reply(user):
     if ("게임이름" in nt or "아무게임" in nt):
         game=random.choice(KNOWLEDGE.get('random',{}).get('games',['마인크래프트']))
         return f"{game} 어떠냐냥"
+    if ("아무줄임말" in nt or "줄임말" in t and "말" in t):
+        abbr=random.choice(KNOWLEDGE.get('random',{}).get('abbreviations',['AI']))
+        return f"{abbr}다냥 뜻도 궁금하면 물어봐라냥"
+    if ("아무사람이름" in nt or ("사람 이름" in t and "아무" in t)):
+        person=random.choice(KNOWLEDGE.get('random',{}).get('people',['철수']))
+        return f"{person}다냥 예시 문제에 쓰기 좋은 이름이다냥"
     if "죽고싶" in t or "자해" in t or "사라지고싶" in t:
         return "지금은 혼자 버티지 말고 바로 주변 어른이나 긴급 도움에 연락해야 한다냥 네 안전이 제일 중요하다냥"
     if len(nt) <= 1:
@@ -364,8 +508,20 @@ def protected_reply(user):
             return "나는 현실의 퍼리는 아니고 고양이 말투를 쓰는 HGAI다냥 :3"
         return req.get("퍼리가 뭐야") or "동물을 의인화한 캐릭터 또는 그런 것들에 끌리는 취향을 말한다냥"
     # 지식 용어는 엉뚱한 용어로 섞이지 않게 직접 답변
+    # creator / intro / capability routes
+    if any(x in t for x in ["만든 사람", "개발자", "누가 만들", "누가 개발"]):
+        if "너" in t or "HGAI" in t or "hgai" in nt:
+            return req.get("너를 만든 사람은") or "나를 만든 사람은 덥듀다냥 HG Company에서 개발되었다냥"
+    if any(x in t for x in ["무슨 프로그램", "어떤 프로그램", "뭐 하는 프로그램"]):
+        return req.get("너는 무슨 프로그램이야") or "나는 HGAI다냥 한국어로 대화하는 고양이 AI 챗봇 프로그램이다냥 :3"
+    if ("뭘할수" in nt or "무엇을할수" in nt or "뭐할수" in nt) and ("ai" in terms or "너" in t or not terms):
+        return req.get("AI는 뭘 할 수 있어") or "AI는 질문 답변, 글쓰기, 코드 도움, 요약, 분류 같은 일을 할 수 있다냥"
+    if "계산" in t and any(x in t for x in ["어디까지", "뭐까지", "가능", "할 수"]):
+        return req.get("계산 어디까지 돼") or "기본 사칙연산과 간단한 문장형 계산을 할 수 있다냥"
     concept_map=[
-        (("llm",), "LLM"), (("github",), "GitHub"), (("git",), "Git"),
+        (("llm",), "LLM"), (("chatgpt",), "ChatGPT"), (("openai",), "OpenAI"),
+        (("github",), "GitHub"), (("git",), "Git"), (("kakaotalk",), "카카오톡"),
+        (("discord",), "디스코드"), (("microsoft",), "마이크로소프트"), (("linuxcreator","linustorvalds"), "리눅스 만든 사람"),
         (("ram",), "RAM"), (("cpu",), "CPU"), (("gpu",), "GPU"),
         (("python",), "Python"), (("c언어",), "C언어"), (("c++",), "C++"),
         (("linux",), "리눅스"), (("windows",), "윈도우"), (("termux",), "Termux"),
@@ -502,7 +658,7 @@ def load_ckpt():
         status("모델 로드 실패:", e); return None
 
 def compatible(ckpt):
-    return isinstance(ckpt,dict) and ckpt.get("version") == "v7-hybrid-core" and ckpt.get("pair_hash") == PAIR_HASH and ckpt.get("preset") == args.preset
+    return isinstance(ckpt,dict) and ckpt.get("version") == "v8-hybrid-engine" and ckpt.get("pair_hash") == PAIR_HASH and ckpt.get("preset") == args.preset
 
 def train_model():
     if not ensure_torch_or_exit(): return None,None,"cpu"
@@ -519,7 +675,7 @@ def train_model():
         yb=torch.stack([data[i+1:i+CONFIG['block_size']+1] for i in ix]).to(device)
         _,loss=model(xb,yb); opt.zero_grad(set_to_none=True); loss.backward(); torch.nn.utils.clip_grad_norm_(model.parameters(),1.0); opt.step()
         if step % max(1,args.steps//20)==0 or step==args.steps-1: status(f"step {step:5d} loss {loss.item():.4f}")
-    ckpt={"version":"v7-hybrid-core","model":model.state_dict(),"vocab":tok.vocab,"config":CONFIG,"pair_hash":PAIR_HASH,"preset":args.preset,"params":count_params(model)}
+    ckpt={"version":"v8-hybrid-engine","model":model.state_dict(),"vocab":tok.vocab,"config":CONFIG,"pair_hash":PAIR_HASH,"preset":args.preset,"params":count_params(model)}
     torch.save(ckpt, MODEL_FILE); status("학습 완료! 저장됨:", MODEL_FILE)
     model.eval(); return model,tok,device
 
@@ -527,11 +683,11 @@ def load_model_runtime():
     if args.lite or args.generation_mode=="off" or not TORCH_AVAILABLE: return None,None,"cpu"
     ckpt=load_ckpt()
     if ckpt and compatible(ckpt):
-        tok=make_tokenizer_from_ckpt_or_data(ckpt); device=get_device(); model=HGAITokenModel(len(tok.vocab),ckpt.get("config",CONFIG)).to(device); model.load_state_dict(ckpt["model"]); model.eval(); status("저장된 v7 Torch 모델 불러옴:", MODEL_FILE); return model,tok,device
+        tok=make_tokenizer_from_ckpt_or_data(ckpt); device=get_device(); model=HGAITokenModel(len(tok.vocab),ckpt.get("config",CONFIG)).to(device); model.load_state_dict(ckpt["model"]); model.eval(); status("저장된 v8 Torch 모델 불러옴:", MODEL_FILE); return model,tok,device
     if args.auto_train or args.retrain:
         return train_model()
-    status("호환 v7 모델 없음. 검색+룰 모드로 실행함. 학습하려면 --retrain 또는 --auto-train 사용")
-    if args.torch_only: raise SystemExit("호환 v7 모델 없음")
+    status("호환 v8 모델 없음. 검색+룰 모드로 실행함. 학습하려면 --retrain 또는 --auto-train 사용")
+    if args.torch_only: raise SystemExit("호환 v8 모델 없음")
     return None,None,"cpu"
 
 @torch.no_grad() if TORCH_AVAILABLE else (lambda f:f)
@@ -557,6 +713,8 @@ def quality_ok(ans,user):
     if not ans or len(ans) < 3 or len(ans) > 160: return False
     if ans.startswith("계산하면") and not is_math_query(user): return False
     if ans.count("냥") > 6: return False
+    if re.search(r"(?:\b[가-힣A-Za-z]{1,2}\b\s*){4,}", ans): return False
+    if any(x in ans for x in ["나는 거", "만든 된다냥", "파일을 플랫폼", "HG Company는 곳에서"]): return False
     if re.search(r"(.{1,4})\1\1\1", ans): return False
     if len(set(ans.replace(" ",""))) < max(3, len(ans.replace(" ",""))//8): return False
     # For knowledge questions, avoid answer that contains a different strong term and not the asked strong term.
@@ -578,7 +736,7 @@ else:
 def reply(user):
     user=clean_text(user)
     # 1) 안전/기본 룰과 명확한 계산은 항상 먼저 처리
-    for fn in (rule_reply, calc_reply, exact_reply, protected_reply):
+    for fn in (rule_reply, sentence_math_reply, korean_calc_reply, calc_reply, code_reply, exact_reply, protected_reply):
         r=fn(user)
         if r: return fix_nyang(r)
     # 2) 검색 전용/생성 끔
@@ -645,7 +803,7 @@ if args.info:
         vocab=len(tok.vocab)
     else:
         params=0; vocab=0
-    print(f"version: v7-hybrid-core")
+    print(f"version: v8-hybrid-engine")
     print(f"train pairs: {len(PAIRS):,}")
     print(f"train chars: {len(raw_train):,}")
     print(f"pair hash: {PAIR_HASH[:12]}")
@@ -668,7 +826,7 @@ if args.benchmark:
 if args.once is not None:
     print(reply(args.once)); raise SystemExit(0)
 
-print("\nHGAI v7 Hybrid-Core 대화 시작! 종료하려면 exit 입력")
+print("\nHGAI v8 Hybrid-Engine 대화 시작! 종료하려면 exit 입력")
 print(f"pairs={len(PAIRS):,}, torch={TORCH_AVAILABLE and MODEL is not None and not args.lite}, preset={args.preset}, mode={args.generation_mode}/{args.reply_mode}")
 while True:
     try: user=input("너: ").strip()

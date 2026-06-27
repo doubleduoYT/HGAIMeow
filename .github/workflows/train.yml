@@ -1,4 +1,4 @@
-name: Train HGAI v7
+name: Train HGAI v8
 
 on:
   workflow_dispatch:
@@ -80,6 +80,6 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: hgai-v7-model-${{ env.PRESET }}
+          name: hgai-v8-model-${{ env.PRESET }}
           path: dist/*
           if-no-files-found: error

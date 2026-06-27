@@ -1,16 +1,14 @@
 {
-  "version": "v7-hybrid-core",
-  "pairs": 12415,
-  "unique_questions": 10548,
-  "train_sha256": "42b6ddbc333d9d2fae125f1ddd790881d6c7da85a78164b7f12d560701f9cb82",
-  "files": [
-    "run_hgai.py",
-    "train.txt",
-    "knowledge.json",
-    "personality.json",
-    "eval_tests.json",
-    "validate_dataset.py",
-    "README.md",
-    ".github/workflows/train.yml"
-  ]
+  "version": "v8-hybrid-engine",
+  "pairs": 12568,
+  "unique_questions": 10694,
+  "features": [
+    "sentence_math",
+    "expanded_knowledge",
+    "korean_calculator",
+    "code_generator",
+    "memory",
+    "auto_eval"
+  ],
+  "created_at": "2026-06-27T12:52:58.648700Z"
 }
