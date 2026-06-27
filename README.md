@@ -1,54 +1,51 @@
-# HGAI v6.2 Hybrid-Token
+# HGAI v7 Hybrid-Core
 
-v6 기반에서 계산기 오작동, 키워드 섞임, GitHub Actions artifact 중첩 ZIP 문제를 고친 버전이다냥.
+v7은 v6.2 기반에서 데이터와 실행 구조를 더 정리한 버전이다냥.
 
-## 핵심 변경
+## 핵심 변화
 
-- `train.txt`: 11,756개 Q&A
-- 고유 질문: 약 10,312개 원본 / 정규화 기준 9천+개
-- 계산기 판별 강화: `ㆍㆍ`, `ㅏㅡ`, `뭔소리야`, `계산하지마`가 계산기로 가지 않음
-- 강한 키워드 보호: `LLM`, `GitHub`, `HG Company`, `퍼리`, `RAM`, `Python` 등이 서로 섞이지 않도록 우선 답변
-- 지식/명령어/오류 대응/감정 대화 추가
-- GitHub Actions artifact가 ZIP 안 ZIP이 아니라 바로 실행 파일 묶음으로 다운로드됨
+- train.txt Q&A: 12,415개
+- knowledge.json 강화: 지식/세계관/보호 키워드 분리
+- personality.json 추가: 말투와 안전 규칙 분리
+- eval_tests.json 추가: Actions에서 기본 성능 검사 가능
+- `--learn "질문=답변"` 추가: 새 Q&A 한 줄 추가
+- `--eval` 추가: 필수 테스트 자동 확인
+- v6.2보다 오타 질문 보호 강화: `깃허브가 뮈야`, `LLM이 뭐샤` 등
 
-## 폰에서 실행
+## 폰 실행
 
 ```bash
 cd ~/storage/downloads
-unzip -o hgai-v6-2-model-mid-safe.zip -d hgai_v6_2_run
-cd hgai_v6_2_run
+unzip -o hgai_v7_hybrid_core.zip
+cd hgai_v7_hybrid_core
+python run_hgai.py --benchmark --lite
+```
+
+## Torch 모델 실행
+
+```bash
 python run_hgai.py --preset mid-safe --generation-mode safe
+python run_hgai.py --preset mid-safe --generation-mode creative
 ```
 
-## 테스트
+## 학습
 
 ```bash
-python run_hgai.py --preset mid-safe --generation-mode safe --benchmark
-python run_hgai.py --preset mid-safe --once "LLM이 뭐야"
-python run_hgai.py --preset mid-safe --once "HG Company 회사에 대해"
-python run_hgai.py --preset mid-safe --once "계산하지마"
-python run_hgai.py --preset mid-safe --once "10000×10000"
-```
-
-## GitHub Actions 학습
-
-저장소에 push하면 자동 학습된다냥. 수동으로 돌릴 때는 Actions → Train HGAI v6.2 → Run workflow.
-
-추천값:
-
-- preset: `mid-safe`
-- steps: `6000` 또는 `10000`
-- generation_mode: `safe`
-
-## 로컬 학습
-
-```bash
-python run_hgai.py --retrain --preset phone --steps 800 --threads 2
 python run_hgai.py --retrain --preset mid-safe --steps 6000 --threads 2
 ```
 
-## 모드
+## 평가
 
-- `--generation-mode safe`: 검색/룰/보호 답변 우선, 필요하면 Torch 생성
-- `--generation-mode creative`: 생성 답변을 더 적극 사용하지만 보호 키워드는 먼저 처리
-- `--lite`: Torch 없이 검색/룰만 사용
+```bash
+python run_hgai.py --eval --preset mid-safe --generation-mode safe
+```
+
+## 새 문장 추가
+
+```bash
+python run_hgai.py --learn "새 질문=새 답변이다냥"
+```
+
+## GitHub Actions
+
+저장소에 push하면 `Train HGAI v7` 워크플로가 실행되고 artifact로 `hgai-v7-model-프리셋`이 생성된다냥.

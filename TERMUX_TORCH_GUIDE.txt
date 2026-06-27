@@ -1,15 +1,11 @@
-Termux 실행 힌트
+Termux에서 Torch 확인:
 
-1) Torch 확인
+pkg update
 pkg install python python-torch
 python -c "import torch; print(torch.__version__)"
 
-2) 실행
-cd ~/storage/downloads/hgai_v6_hybrid_token
-python run_hgai.py --preset mid-safe
+실행:
+python run_hgai.py --preset mid-safe --generation-mode safe
 
-3) 학습
-python run_hgai.py --retrain --preset phone --steps 800 --threads 2
-
-4) 안 되면 Lite
+Lite:
 python run_hgai.py --lite

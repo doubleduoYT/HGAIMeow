@@ -1,20 +1,16 @@
 {
-  "version": "v6.2-hybrid-token",
-  "pairs": 11756,
-  "unique_questions": 10312,
-  "old_pairs_before_v6_2": 10731,
-  "sha256": "1af003a1137ede4f6075cef974ac3fed3f634486d9f5f92c78a87c5765de0cfa",
-  "notes": [
-    "계산기 오작동 방지",
-    "강한 키워드 보호",
-    "지식/명령어/오류 대응/감정 대화 확장",
-    "Actions artifact 중첩 zip 제거"
-  ],
-  "fixed_in_code": [
-    "계산하지마/오타 계산 금지",
-    "의미 없는 자모/기호 입력 처리",
-    "protected_reply로 HG Company/LLM/GitHub/퍼리 보호",
-    "creative 모드에서도 지식 질문은 검색/보호 우선",
-    "Actions artifact 중첩 zip 제거"
+  "version": "v7-hybrid-core",
+  "pairs": 12415,
+  "unique_questions": 10548,
+  "train_sha256": "42b6ddbc333d9d2fae125f1ddd790881d6c7da85a78164b7f12d560701f9cb82",
+  "files": [
+    "run_hgai.py",
+    "train.txt",
+    "knowledge.json",
+    "personality.json",
+    "eval_tests.json",
+    "validate_dataset.py",
+    "README.md",
+    ".github/workflows/train.yml"
   ]
 }

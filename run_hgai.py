@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# HGAI v6.2 Hybrid-Token
+# HGAI v7 Hybrid-Core
 # - Exact/keyword/fuzzy search + calculator + memory + token-based Transformer
 # - Keeps train.txt compatibility: 질문=답변
 # - Default uses Torch when available; fallback to Lite when unavailable
@@ -12,6 +12,8 @@ BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_TRAIN_FILE = BASE_DIR / "train.txt"
 DEFAULT_MODEL_FILE = BASE_DIR / "hgai_model.pth"
 DEFAULT_KNOWLEDGE_FILE = BASE_DIR / "knowledge.json"
+DEFAULT_PERSONALITY_FILE = BASE_DIR / "personality.json"
+DEFAULT_EVAL_FILE = BASE_DIR / "eval_tests.json"
 MEMORY_FILE = BASE_DIR / "memory.json"
 
 # lazy torch
@@ -29,10 +31,12 @@ PRESETS = {
     "pc":        {"block_size": 192, "batch_size": 8,  "n_embd": 256, "n_head": 8, "n_layer": 4, "dropout": 0.12, "max_vocab": 20000},
 }
 
-parser = argparse.ArgumentParser(description="HGAI v6.2 hybrid-token Korean cat chatbot")
+parser = argparse.ArgumentParser(description="HGAI v7 hybrid-core Korean cat chatbot")
 parser.add_argument("--train-file", default=str(DEFAULT_TRAIN_FILE))
 parser.add_argument("--model-file", default=str(DEFAULT_MODEL_FILE))
 parser.add_argument("--knowledge-file", default=str(DEFAULT_KNOWLEDGE_FILE))
+parser.add_argument("--personality-file", default=str(DEFAULT_PERSONALITY_FILE))
+parser.add_argument("--eval-file", default=str(DEFAULT_EVAL_FILE))
 parser.add_argument("--preset", default="mid-safe", choices=sorted(PRESETS.keys()))
 parser.add_argument("--retrain", action="store_true")
 parser.add_argument("--auto-train", action="store_true")
@@ -53,6 +57,8 @@ parser.add_argument("--reply-mode", default="hybrid", choices=["hybrid","search-
 parser.add_argument("--info", action="store_true")
 parser.add_argument("--benchmark", action="store_true")
 parser.add_argument("--validate", action="store_true")
+parser.add_argument("--eval", action="store_true", help="eval_tests.json으로 기본 성능 검사")
+parser.add_argument("--learn", type=str, default=None, help="질문=답변 한 줄을 train.txt에 추가")
 parser.add_argument("--install-help", action="store_true")
 args = parser.parse_args()
 CONFIG = dict(PRESETS[args.preset])
@@ -86,7 +92,7 @@ pkg install python python-torch
 python -c "import torch; print(torch.__version__)"
 
 [GitHub Actions]
-저장소에 push하면 .github/workflows/train.yml 이 자동 학습을 돌리고 artifact로 모델 zip을 올린다냥.
+저장소에 push하면 .github/workflows/train.yml 이 자동 학습을 돌리고 artifact로 v7 모델을 올린다냥.
 
 [폰 실행]
 python run_hgai.py --preset mid-safe
@@ -118,6 +124,14 @@ try:
     KNOWLEDGE = json.loads(KNOWLEDGE_FILE.read_text(encoding="utf-8")) if KNOWLEDGE_FILE.exists() else {}
 except Exception:
     KNOWLEDGE = {}
+try:
+    PERSONALITY = json.loads(Path(args.personality_file).read_text(encoding="utf-8")) if Path(args.personality_file).exists() else {}
+except Exception:
+    PERSONALITY = {}
+try:
+    EVAL_TESTS = json.loads(Path(args.eval_file).read_text(encoding="utf-8")) if Path(args.eval_file).exists() else []
+except Exception:
+    EVAL_TESTS = []
 
 # ---------- text cleanup / dataset ----------
 def fix_nyang(text):
@@ -145,7 +159,7 @@ SYNONYMS = [
     ("에이아이","ai"),("인공지능","ai"),("ai","ai"),("램","ram"),("ram","ram"),
     ("퍼리","furry"),("수인","furry"),("furry","furry"),
     ("hg company","hgcompany"),("hg사","hgcompany"),("hg 회사","hgcompany"),("hg컴퍼니","hgcompany"),("hgcompany","hgcompany"),
-    ("덥듀","doubleduo"),("doubleduo","doubleduo"),("hg ai","hgai"),("hgai","hgai"),
+    ("덥듀","doubleduo"),("doubleduo","doubleduo"),("hg ai","hgai"),("hgai","hgai"),("깃허브가뮈야","github"),("뮈야","뭐야"),("뭐샤","뭐야"),("머야","뭐야"),("뭔데","뭐야"),
 ]
 STRONG_TERMS = sorted({b for _,b in SYNONYMS} | {"api","json","html","css","java","javascript","torch","pytorch","git","cpu","gpu","os","apk","zip"}, key=len, reverse=True)
 
@@ -170,6 +184,22 @@ def words_for_terms(s):
         if len(w) >= 2 and w not in {"뭐야","알려줘","설명해줘","대해","쉽게","아무거나","말해봐"}:
             found.add(w)
     return found
+
+def looks_like_question(s):
+    t=clean_text(s)
+    nt=normalize(t)
+    return any(k in t for k in ["뭐야","뭐임","뜻","설명","알려","대해","란","뭐냐","뭔데","머야","뭐샤","뮈야","무엇","어떤"]) or any(k in nt for k in ["뭐야","뜻","설명","알려","대해","란"] )
+
+def append_learn_line(line):
+    if not line or "=" not in line:
+        return "배울 내용은 질문=답변 형식이어야 한다냥"
+    q,a=line.split("=",1)
+    q=clean_text(q); a=fix_nyang(a)
+    if not q or not a:
+        return "질문이나 답변이 비어있다냥"
+    with open(TRAIN_FILE,"a",encoding="utf-8") as f:
+        f.write(f"{q}={a}\n")
+    return f"배웠다냥: {q} => {a}"
 
 def parse_pairs(text):
     pairs=[]
@@ -343,7 +373,7 @@ def protected_reply(user):
         (("html",), "HTML"), (("css",), "CSS"), (("javascript",), "JavaScript"),
         (("token", "토큰"), "토큰"), (("parameter", "파라미터"), "파라미터"), (("epoch", "에포크"), "에포크"),
     ]
-    if any(k in t for k in ["뭐야", "뭐임", "뜻", "설명", "알려", "대해", "란"]):
+    if looks_like_question(t):
         for aliases,key in concept_map:
             if any(a in terms or a in nt for a in aliases):
                 return concepts.get(key) or concepts.get(key.upper())
@@ -354,7 +384,7 @@ def fuzzy_reply(user, threshold=None):
     nu=normalize(user); tu=words_for_terms(user)
     if not nu: return None
     best=(-1,None)
-    is_knowledge = any(x in user for x in ["뭐야","뭐임","뜻","설명","알려","대해","란"])
+    is_knowledge = looks_like_question(user)
     for i, qn in enumerate(q_norms):
         if not qn: continue
         tq=q_terms[i]
@@ -472,7 +502,7 @@ def load_ckpt():
         status("모델 로드 실패:", e); return None
 
 def compatible(ckpt):
-    return isinstance(ckpt,dict) and ckpt.get("version") == "v6.2-hybrid-token" and ckpt.get("pair_hash") == PAIR_HASH and ckpt.get("preset") == args.preset
+    return isinstance(ckpt,dict) and ckpt.get("version") == "v7-hybrid-core" and ckpt.get("pair_hash") == PAIR_HASH and ckpt.get("preset") == args.preset
 
 def train_model():
     if not ensure_torch_or_exit(): return None,None,"cpu"
@@ -481,7 +511,7 @@ def train_model():
     if len(data) < CONFIG['block_size']+2: raise RuntimeError("dataset too small")
     model=HGAITokenModel(len(tok.vocab),CONFIG).to(device)
     opt=torch.optim.AdamW(model.parameters(), lr=args.lr)
-    status(f"학습 시작 v6 preset={args.preset} params={count_params(model):,} vocab={len(tok.vocab):,} tokens={len(data):,} device={device} steps={args.steps}")
+    status(f"학습 시작 v7 preset={args.preset} params={count_params(model):,} vocab={len(tok.vocab):,} tokens={len(data):,} device={device} steps={args.steps}")
     model.train()
     for step in range(args.steps):
         ix=torch.randint(0, len(data)-CONFIG['block_size']-1, (CONFIG['batch_size'],))
@@ -489,7 +519,7 @@ def train_model():
         yb=torch.stack([data[i+1:i+CONFIG['block_size']+1] for i in ix]).to(device)
         _,loss=model(xb,yb); opt.zero_grad(set_to_none=True); loss.backward(); torch.nn.utils.clip_grad_norm_(model.parameters(),1.0); opt.step()
         if step % max(1,args.steps//20)==0 or step==args.steps-1: status(f"step {step:5d} loss {loss.item():.4f}")
-    ckpt={"version":"v6.2-hybrid-token","model":model.state_dict(),"vocab":tok.vocab,"config":CONFIG,"pair_hash":PAIR_HASH,"preset":args.preset,"params":count_params(model)}
+    ckpt={"version":"v7-hybrid-core","model":model.state_dict(),"vocab":tok.vocab,"config":CONFIG,"pair_hash":PAIR_HASH,"preset":args.preset,"params":count_params(model)}
     torch.save(ckpt, MODEL_FILE); status("학습 완료! 저장됨:", MODEL_FILE)
     model.eval(); return model,tok,device
 
@@ -497,11 +527,11 @@ def load_model_runtime():
     if args.lite or args.generation_mode=="off" or not TORCH_AVAILABLE: return None,None,"cpu"
     ckpt=load_ckpt()
     if ckpt and compatible(ckpt):
-        tok=make_tokenizer_from_ckpt_or_data(ckpt); device=get_device(); model=HGAITokenModel(len(tok.vocab),ckpt.get("config",CONFIG)).to(device); model.load_state_dict(ckpt["model"]); model.eval(); status("저장된 v6 Torch 모델 불러옴:", MODEL_FILE); return model,tok,device
+        tok=make_tokenizer_from_ckpt_or_data(ckpt); device=get_device(); model=HGAITokenModel(len(tok.vocab),ckpt.get("config",CONFIG)).to(device); model.load_state_dict(ckpt["model"]); model.eval(); status("저장된 v7 Torch 모델 불러옴:", MODEL_FILE); return model,tok,device
     if args.auto_train or args.retrain:
         return train_model()
-    status("호환 v6 모델 없음. 검색+룰 모드로 실행함. 학습하려면 --retrain 또는 --auto-train 사용")
-    if args.torch_only: raise SystemExit("호환 v6 모델 없음")
+    status("호환 v7 모델 없음. 검색+룰 모드로 실행함. 학습하려면 --retrain 또는 --auto-train 사용")
+    if args.torch_only: raise SystemExit("호환 v7 모델 없음")
     return None,None,"cpu"
 
 @torch.no_grad() if TORCH_AVAILABLE else (lambda f:f)
@@ -533,7 +563,7 @@ def quality_ok(ans,user):
     tu=words_for_terms(user); ta=words_for_terms(ans)
     strong_u={x for x in tu if x in STRONG_TERMS or re.fullmatch(r"[a-zA-Z0-9_+#.]{2,}",x)}
     strong_a={x for x in ta if x in STRONG_TERMS or re.fullmatch(r"[a-zA-Z0-9_+#.]{2,}",x)}
-    if any(k in user for k in ["뭐야","뜻","설명","대해","알려"]) and strong_u and strong_a and not (strong_u & strong_a):
+    if looks_like_question(user) and strong_u and strong_a and not (strong_u & strong_a):
         # allow identity answers
         if not ({"hgai","hgcompany","doubleduo"} & (strong_u|strong_a)):
             return False
@@ -555,7 +585,7 @@ def reply(user):
     if args.reply_mode == "search-only" or args.generation_mode == "off":
         return fix_nyang(fuzzy_reply(user) or "잘 모르겠다냥 새로 배우고 싶다냥 :3")
     # 3) 지식 질문이나 강한 키워드가 있으면 검색을 먼저 강하게 시도해서 용어 섞임 방지
-    is_knowledge = any(x in user for x in ["뭐야","뭐임","뜻","설명","알려","대해","란"])
+    is_knowledge = looks_like_question(user)
     has_strong = bool(words_for_terms(user) & set(STRONG_TERMS))
     if is_knowledge or has_strong:
         r=fuzzy_reply(user, threshold=min(args.fuzzy_threshold, 0.62))
@@ -588,6 +618,25 @@ def validate_dataset():
     for row in bad[:20]: print("WARN", row[2], row[0], "=>", row[1])
     return len(bad)
 
+
+if args.learn is not None:
+    print(append_learn_line(args.learn)); raise SystemExit(0)
+
+def run_eval_tests():
+    total=0; ok=0
+    for item in EVAL_TESTS:
+        q=item.get("q",""); must=item.get("must",[]); forbid=item.get("forbid",[])
+        a=reply(q)
+        total+=1
+        passed=all(m in a for m in must) and not any(f in a for f in forbid)
+        ok+=1 if passed else 0
+        print(("OK" if passed else "FAIL"), "Q:", q, "A:", a)
+    print(f"eval: {ok}/{total} passed")
+    return 0 if ok==total else 1
+
+if args.eval:
+    raise SystemExit(run_eval_tests())
+
 if args.info:
     tok=make_tokenizer_from_ckpt_or_data(load_ckpt()) if TORCH_AVAILABLE else None
     if TORCH_AVAILABLE and tok:
@@ -596,7 +645,7 @@ if args.info:
         vocab=len(tok.vocab)
     else:
         params=0; vocab=0
-    print(f"version: v6.2-hybrid-token")
+    print(f"version: v7-hybrid-core")
     print(f"train pairs: {len(PAIRS):,}")
     print(f"train chars: {len(raw_train):,}")
     print(f"pair hash: {PAIR_HASH[:12]}")
@@ -619,7 +668,7 @@ if args.benchmark:
 if args.once is not None:
     print(reply(args.once)); raise SystemExit(0)
 
-print("\nHGAI v6.2 Hybrid-Token 대화 시작! 종료하려면 exit 입력")
+print("\nHGAI v7 Hybrid-Core 대화 시작! 종료하려면 exit 입력")
 print(f"pairs={len(PAIRS):,}, torch={TORCH_AVAILABLE and MODEL is not None and not args.lite}, preset={args.preset}, mode={args.generation_mode}/{args.reply_mode}")
 while True:
     try: user=input("너: ").strip()

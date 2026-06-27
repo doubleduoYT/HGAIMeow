@@ -1,10 +1,10 @@
-name: Train HGAI v6.2
+name: Train HGAI v7
 
 on:
   workflow_dispatch:
     inputs:
       preset:
-        description: "Model preset"
+        description: "model preset"
         required: true
         default: "mid-safe"
         type: choice
@@ -15,11 +15,11 @@ on:
           - mid-plus
           - pc
       steps:
-        description: "Training steps"
+        description: "training steps"
         required: true
         default: "6000"
       generation_mode:
-        description: "Benchmark generation mode"
+        description: "benchmark generation mode"
         required: true
         default: "safe"
         type: choice
@@ -28,57 +28,58 @@ on:
           - creative
           - off
   push:
+    branches: [ main, master ]
     paths:
+      - "run_hgai.py"
       - "train.txt"
       - "knowledge.json"
-      - "run_hgai.py"
-      - "validate_dataset.py"
+      - "personality.json"
+      - "eval_tests.json"
       - ".github/workflows/train.yml"
 
 jobs:
   train:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    env:
+      PRESET: ${{ github.event.inputs.preset || 'mid-safe' }}
+      STEPS: ${{ github.event.inputs.steps || '6000' }}
+      GENMODE: ${{ github.event.inputs.generation_mode || 'safe' }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install PyTorch CPU
+
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
-      - name: Dataset validation
+          pip install torch
+
+      - name: Validate dataset
         run: |
-          python run_hgai.py --lite --validate
-      - name: Train
+          python validate_dataset.py
+          python run_hgai.py --validate --lite
+
+      - name: Train model
         run: |
-          PRESET="${{ github.event.inputs.preset || 'mid-safe' }}"
-          STEPS="${{ github.event.inputs.steps || '6000' }}"
-          python run_hgai.py --retrain --preset "$PRESET" --steps "$STEPS" --threads 2 --model-file hgai_model.pth
-      - name: Benchmark
+          python run_hgai.py --retrain --preset "$PRESET" --steps "$STEPS" --threads 2
+
+      - name: Info and benchmark
         run: |
-          PRESET="${{ github.event.inputs.preset || 'mid-safe' }}"
-          MODE="${{ github.event.inputs.generation_mode || 'safe' }}"
-          python run_hgai.py --preset "$PRESET" --generation-mode "$MODE" --benchmark --model-file hgai_model.pth | tee benchmark.txt
-      - name: Model info
+          python run_hgai.py --info --preset "$PRESET"
+          python run_hgai.py --benchmark --preset "$PRESET" --generation-mode "$GENMODE"
+          python run_hgai.py --eval --preset "$PRESET" --generation-mode safe
+
+      - name: Prepare artifact
         run: |
-          PRESET="${{ github.event.inputs.preset || 'mid-safe' }}"
-          python run_hgai.py --preset "$PRESET" --info --model-file hgai_model.pth | tee model-info.txt
-      - name: Upload model files
+          mkdir -p dist
+          cp run_hgai.py train.txt knowledge.json personality.json eval_tests.json validate_dataset.py requirements.txt README.md TERMUX_TORCH_GUIDE.txt DATASET_REPORT.json hgai_model.pth dist/
+          ls -lah dist
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: hgai-v6-2-model-${{ github.event.inputs.preset || 'mid-safe' }}
-          path: |
-            run_hgai.py
-            train.txt
-            knowledge.json
-            README.md
-            TERMUX_TORCH_GUIDE.txt
-            DATASET_REPORT.json
-            requirements.txt
-            validate_dataset.py
-            hgai_model.pth
-            benchmark.txt
-            model-info.txt
-          retention-days: 30
+          name: hgai-v7-model-${{ env.PRESET }}
+          path: dist/*
+          if-no-files-found: error
