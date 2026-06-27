@@ -1,4 +1,4 @@
-name: Train HGAI v6
+name: Train HGAI v6.2
 
 on:
   workflow_dispatch:
@@ -9,6 +9,7 @@ on:
         default: "mid-safe"
         type: choice
         options:
+          - tiny
           - phone
           - mid-safe
           - mid-plus
@@ -17,11 +18,21 @@ on:
         description: "Training steps"
         required: true
         default: "6000"
+      generation_mode:
+        description: "Benchmark generation mode"
+        required: true
+        default: "safe"
+        type: choice
+        options:
+          - safe
+          - creative
+          - off
   push:
     paths:
       - "train.txt"
       - "knowledge.json"
       - "run_hgai.py"
+      - "validate_dataset.py"
       - ".github/workflows/train.yml"
 
 jobs:
@@ -47,12 +58,27 @@ jobs:
           python run_hgai.py --retrain --preset "$PRESET" --steps "$STEPS" --threads 2 --model-file hgai_model.pth
       - name: Benchmark
         run: |
-          python run_hgai.py --preset "${{ github.event.inputs.preset || 'mid-safe' }}" --benchmark --model-file hgai_model.pth | tee benchmark.txt
-      - name: Package artifact
+          PRESET="${{ github.event.inputs.preset || 'mid-safe' }}"
+          MODE="${{ github.event.inputs.generation_mode || 'safe' }}"
+          python run_hgai.py --preset "$PRESET" --generation-mode "$MODE" --benchmark --model-file hgai_model.pth | tee benchmark.txt
+      - name: Model info
         run: |
-          zip -r hgai-v6-model.zip run_hgai.py train.txt knowledge.json README.md TERMUX_TORCH_GUIDE.txt DATASET_REPORT.json hgai_model.pth benchmark.txt
-      - uses: actions/upload-artifact@v4
+          PRESET="${{ github.event.inputs.preset || 'mid-safe' }}"
+          python run_hgai.py --preset "$PRESET" --info --model-file hgai_model.pth | tee model-info.txt
+      - name: Upload model files
+        uses: actions/upload-artifact@v4
         with:
-          name: hgai-v6-model-${{ github.event.inputs.preset || 'mid-safe' }}
-          path: hgai-v6-model.zip
+          name: hgai-v6-2-model-${{ github.event.inputs.preset || 'mid-safe' }}
+          path: |
+            run_hgai.py
+            train.txt
+            knowledge.json
+            README.md
+            TERMUX_TORCH_GUIDE.txt
+            DATASET_REPORT.json
+            requirements.txt
+            validate_dataset.py
+            hgai_model.pth
+            benchmark.txt
+            model-info.txt
           retention-days: 30

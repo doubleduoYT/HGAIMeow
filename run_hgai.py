@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# HGAI v6 Hybrid-Token
+# HGAI v6.2 Hybrid-Token
 # - Exact/keyword/fuzzy search + calculator + memory + token-based Transformer
 # - Keeps train.txt compatibility: 질문=답변
 # - Default uses Torch when available; fallback to Lite when unavailable
@@ -29,7 +29,7 @@ PRESETS = {
     "pc":        {"block_size": 192, "batch_size": 8,  "n_embd": 256, "n_head": 8, "n_layer": 4, "dropout": 0.12, "max_vocab": 20000},
 }
 
-parser = argparse.ArgumentParser(description="HGAI v6 hybrid-token Korean cat chatbot")
+parser = argparse.ArgumentParser(description="HGAI v6.2 hybrid-token Korean cat chatbot")
 parser.add_argument("--train-file", default=str(DEFAULT_TRAIN_FILE))
 parser.add_argument("--model-file", default=str(DEFAULT_MODEL_FILE))
 parser.add_argument("--knowledge-file", default=str(DEFAULT_KNOWLEDGE_FILE))
@@ -126,6 +126,8 @@ def fix_nyang(text):
     text = re.sub(r"냥\s+냥", "냥냥", text)
     text = re.sub(r"(냥){4,}", "냥냥", text)
     text = text.replace("언 어", "언어").replace("파이 썬", "파이썬")
+    text = re.sub(r"\b(\S{2,})\s+\1\b", r"\1", text)
+    text = re.sub(r"(\S{2,6})(?:\s+\1){1,}", r"\1", text)
     text = re.sub(r"\s{2,}", " ", text)
     return text.strip()
 
@@ -212,13 +214,36 @@ def safe_eval_expr(expr):
         return int(val) if isinstance(val,float) and val.is_integer() else round(val,10)
     except Exception: return None
 
+def is_math_query(text):
+    t=clean_text(text)
+    if re.search(r"계산\s*(하지마|하지 마|말고|안해|안 해|금지)", t) or ("계산" in t and any(x in t for x in ["하지", "말고", "안해", "안 해", "금지"])):
+        return False
+    if not re.search(r"\d", t):
+        return False
+    expr = re.fullmatch(r"\s*-?\d+(?:\.\d+)?\s*(?:[+\-*/xX×÷%^]\s*-?\d+(?:\.\d+)?\s*)+\s*", t)
+    if expr:
+        return True
+    if re.search(r"\d+\s*부터\s*\d+\s*까지\s*(더해|합|더하면|합계)", t):
+        return True
+    if re.search(r"\d+\s*단(\s|$|[을를]?\s*(외워|알려|출력|보여))", t):
+        return True
+    if re.search(r"\d+\s*팩토리얼", t):
+        return True
+    if re.search(r"\d+(?:\.\d+)?\s*의\s*\d+(?:\.\d+)?\s*%", t):
+        return True
+    return False
+
 def calc_reply(user):
     t=user.strip()
-    m=re.search(r"(-?\d+(?:\.\d+)?\s*[\+\-\*xX×÷/%^]\s*-?\d+(?:\.\d+)?(?:\s*[\+\-\*xX×÷/%^]\s*-?\d+(?:\.\d+)?)*)", t)
+    if not is_math_query(t):
+        return None
+    m=re.fullmatch(r"\s*(-?\d+(?:\.\d+)?\s*(?:[+\-*/xX×÷/%^]\s*-?\d+(?:\.\d+)?\s*)+)\s*", t)
+    if not m:
+        m=re.search(r"(-?\d+(?:\.\d+)?\s*(?:[+\-*/xX×÷/%^]\s*-?\d+(?:\.\d+)?\s*)+)", t)
     if m:
         v=safe_eval_expr(m.group(1))
         if v is not None: return f"계산하면 {v}다냥 :3"
-    m=re.search(r"(\d+)\s*부터\s*(\d+)\s*까지\s*(더해|합)", t)
+    m=re.search(r"(\d+)\s*부터\s*(\d+)\s*까지\s*(더해|합|더하면|합계)", t)
     if m:
         a,b=map(int,m.group(1,2));
         if abs(b-a) <= 1000000:
@@ -244,6 +269,10 @@ def save_memory(mem):
 def rule_reply(user):
     t=clean_text(user)
     nt=normalize(t)
+    if re.search(r"계산\s*(하지마|하지 마|말고|안해|안 해|금지)", t) or ("계산" in t and any(x in t for x in ["하지", "말고", "안해", "안 해", "금지"])):
+        return "알겠다냥 이번엔 계산 안 하겠다냥"
+    if is_noise_input(t):
+        return "냥? 한 글자나 의미 없는 입력은 어렵다냥 조금 더 말해줘라냥 :3"
     m=re.search(r"내 이름은\s*([가-힣A-Za-z0-9_\-]{1,20})", t)
     if m:
         mem=load_memory(); mem["user_name"]=m.group(1); save_memory(mem)
@@ -269,6 +298,56 @@ def rule_reply(user):
 def exact_reply(user):
     arr=by_exact.get(normalize(user))
     return arr[0] if arr else None
+
+def is_noise_input(user):
+    t=clean_text(user)
+    compact=re.sub(r"\s+", "", t)
+    if not compact:
+        return True
+    if len(compact) <= 1:
+        return True
+    if re.fullmatch(r"""[\.\?\!~`'"ㆍᆞ·…\-_=+*/\\|,;:()\[\]{}<>]+""", compact):
+        return True
+    if re.fullmatch(r"[ㄱ-ㅎㅏ-ㅣㆍᆞ·]+", compact):
+        return True
+    if len(compact) <= 3 and re.fullmatch(r"[ㄱ-ㅎㅏ-ㅣ가-힣ㆍᆞ·]+", compact) and not re.search(r"[가-힣]{2,}", compact):
+        return True
+    return False
+
+def protected_reply(user):
+    t=clean_text(user)
+    nt=normalize(t)
+    terms=words_for_terms(t)
+    req=KNOWLEDGE.get("required_answers", {})
+    concepts=KNOWLEDGE.get("concepts", {})
+    # 정확해야 하는 세계관/정체성 답변
+    if "hgcompany" in terms:
+        return req.get("HG Company가 뭐야") or "여러 IT 주제를 다루거나 특이한 거 개발도 하는 회사다냥"
+    if "doubleduo" in terms and any(k in t for k in ["누구", "뭐야", "만든", "개발"]):
+        return "덥듀는 나 HGAI를 만든 개발자이자 HG Company를 굴리는 사람이다냥"
+    if ("hgai" in terms or re.search(r"너(는|가)?\s*(누구|뭐야|정체)", t)) and any(k in t for k in ["누구", "뭐야", "정체", "소개"]):
+        return req.get("너는 뭐야") or "나는 HGAI다냥 한국어로 대화하는 작은 고양이 AI다냥 :3"
+    if any(k in t for k in ["어디서", "어디에서", "만들어졌", "태어났"]) and ("너" in t or "HGAI" in t or "hgai" in nt):
+        return req.get("너는 어디에서 만들어졌어") or "나는 HG Company라는 곳에서 덥듀라는 사람에게 개발되었다냥"
+    if "furry" in terms:
+        if "너" in t or "HGAI" in t:
+            return "나는 현실의 퍼리는 아니고 고양이 말투를 쓰는 HGAI다냥 :3"
+        return req.get("퍼리가 뭐야") or "동물을 의인화한 캐릭터 또는 그런 것들에 끌리는 취향을 말한다냥"
+    # 지식 용어는 엉뚱한 용어로 섞이지 않게 직접 답변
+    concept_map=[
+        (("llm",), "LLM"), (("github",), "GitHub"), (("git",), "Git"),
+        (("ram",), "RAM"), (("cpu",), "CPU"), (("gpu",), "GPU"),
+        (("python",), "Python"), (("c언어",), "C언어"), (("c++",), "C++"),
+        (("linux",), "리눅스"), (("windows",), "윈도우"), (("termux",), "Termux"),
+        (("torch", "pytorch"), "PyTorch"), (("api",), "API"), (("json",), "JSON"),
+        (("html",), "HTML"), (("css",), "CSS"), (("javascript",), "JavaScript"),
+        (("token", "토큰"), "토큰"), (("parameter", "파라미터"), "파라미터"), (("epoch", "에포크"), "에포크"),
+    ]
+    if any(k in t for k in ["뭐야", "뭐임", "뜻", "설명", "알려", "대해", "란"]):
+        for aliases,key in concept_map:
+            if any(a in terms or a in nt for a in aliases):
+                return concepts.get(key) or concepts.get(key.upper())
+    return None
 
 def fuzzy_reply(user, threshold=None):
     threshold = args.fuzzy_threshold if threshold is None else threshold
@@ -393,7 +472,7 @@ def load_ckpt():
         status("모델 로드 실패:", e); return None
 
 def compatible(ckpt):
-    return isinstance(ckpt,dict) and ckpt.get("version") == "v6-hybrid-token" and ckpt.get("pair_hash") == PAIR_HASH and ckpt.get("preset") == args.preset
+    return isinstance(ckpt,dict) and ckpt.get("version") == "v6.2-hybrid-token" and ckpt.get("pair_hash") == PAIR_HASH and ckpt.get("preset") == args.preset
 
 def train_model():
     if not ensure_torch_or_exit(): return None,None,"cpu"
@@ -410,7 +489,7 @@ def train_model():
         yb=torch.stack([data[i+1:i+CONFIG['block_size']+1] for i in ix]).to(device)
         _,loss=model(xb,yb); opt.zero_grad(set_to_none=True); loss.backward(); torch.nn.utils.clip_grad_norm_(model.parameters(),1.0); opt.step()
         if step % max(1,args.steps//20)==0 or step==args.steps-1: status(f"step {step:5d} loss {loss.item():.4f}")
-    ckpt={"version":"v6-hybrid-token","model":model.state_dict(),"vocab":tok.vocab,"config":CONFIG,"pair_hash":PAIR_HASH,"preset":args.preset,"params":count_params(model)}
+    ckpt={"version":"v6.2-hybrid-token","model":model.state_dict(),"vocab":tok.vocab,"config":CONFIG,"pair_hash":PAIR_HASH,"preset":args.preset,"params":count_params(model)}
     torch.save(ckpt, MODEL_FILE); status("학습 완료! 저장됨:", MODEL_FILE)
     model.eval(); return model,tok,device
 
@@ -446,6 +525,7 @@ def torch_generate(model,tok,device,user_text):
 
 def quality_ok(ans,user):
     if not ans or len(ans) < 3 or len(ans) > 160: return False
+    if ans.startswith("계산하면") and not is_math_query(user): return False
     if ans.count("냥") > 6: return False
     if re.search(r"(.{1,4})\1\1\1", ans): return False
     if len(set(ans.replace(" ",""))) < max(3, len(ans.replace(" ",""))//8): return False
@@ -467,12 +547,20 @@ else:
 
 def reply(user):
     user=clean_text(user)
-    for fn in (calc_reply, rule_reply, exact_reply):
+    # 1) 안전/기본 룰과 명확한 계산은 항상 먼저 처리
+    for fn in (rule_reply, calc_reply, exact_reply, protected_reply):
         r=fn(user)
         if r: return fix_nyang(r)
-    # Modes
+    # 2) 검색 전용/생성 끔
     if args.reply_mode == "search-only" or args.generation_mode == "off":
         return fix_nyang(fuzzy_reply(user) or "잘 모르겠다냥 새로 배우고 싶다냥 :3")
+    # 3) 지식 질문이나 강한 키워드가 있으면 검색을 먼저 강하게 시도해서 용어 섞임 방지
+    is_knowledge = any(x in user for x in ["뭐야","뭐임","뜻","설명","알려","대해","란"])
+    has_strong = bool(words_for_terms(user) & set(STRONG_TERMS))
+    if is_knowledge or has_strong:
+        r=fuzzy_reply(user, threshold=min(args.fuzzy_threshold, 0.62))
+        if r: return fix_nyang(r)
+    # 4) Torch 생성 모드
     if args.reply_mode == "torch-only":
         g=torch_generate(MODEL,TOKENIZER,DEVICE,user)
         return fix_nyang(g if quality_ok(g,user) else "잘 모르겠다냥 더 학습이 필요하다냥")
@@ -481,7 +569,7 @@ def reply(user):
         if quality_ok(g,user): return fix_nyang(g)
         r=fuzzy_reply(user)
         return fix_nyang(r or "잘 모르겠다냥 새로 배우고 싶다냥 :3")
-    # safe hybrid: exact/rules done, then keyword-guarded fuzzy, then generation, then fallback
+    # 5) safe hybrid: 검색 → 생성 → fallback
     r=fuzzy_reply(user)
     if r: return fix_nyang(r)
     g=torch_generate(MODEL,TOKENIZER,DEVICE,user)
@@ -508,7 +596,7 @@ if args.info:
         vocab=len(tok.vocab)
     else:
         params=0; vocab=0
-    print(f"version: v6-hybrid-token")
+    print(f"version: v6.2-hybrid-token")
     print(f"train pairs: {len(PAIRS):,}")
     print(f"train chars: {len(raw_train):,}")
     print(f"pair hash: {PAIR_HASH[:12]}")
@@ -531,7 +619,7 @@ if args.benchmark:
 if args.once is not None:
     print(reply(args.once)); raise SystemExit(0)
 
-print("\nHGAI v6 Hybrid-Token 대화 시작! 종료하려면 exit 입력")
+print("\nHGAI v6.2 Hybrid-Token 대화 시작! 종료하려면 exit 입력")
 print(f"pairs={len(PAIRS):,}, torch={TORCH_AVAILABLE and MODEL is not None and not args.lite}, preset={args.preset}, mode={args.generation_mode}/{args.reply_mode}")
 while True:
     try: user=input("너: ").strip()

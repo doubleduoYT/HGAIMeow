@@ -1,14 +1,20 @@
 {
-  "version": "v6-hybrid-token",
-  "pairs": 10731,
-  "unique_questions": 9248,
-  "sha256": "f58a5e59f7b839893ea99810c18bcab91d2359c19dbbb14e02552b9a4bd9d97f",
-  "model_included": false,
+  "version": "v6.2-hybrid-token",
+  "pairs": 11756,
+  "unique_questions": 10312,
+  "old_pairs_before_v6_2": 10731,
+  "sha256": "1af003a1137ede4f6075cef974ac3fed3f634486d9f5f92c78a87c5765de0cfa",
   "notes": [
-    "v5 데이터 유지/정리",
-    "필수 퍼리/HG Company/덥듀/LLM/GitHub Q&A 추가",
-    "토큰 기반 Transformer용 실행 코드 포함",
-    "검색/룰/계산/메모리 하이브리드",
-    "GitHub Actions 학습 자동화 포함"
+    "계산기 오작동 방지",
+    "강한 키워드 보호",
+    "지식/명령어/오류 대응/감정 대화 확장",
+    "Actions artifact 중첩 zip 제거"
+  ],
+  "fixed_in_code": [
+    "계산하지마/오타 계산 금지",
+    "의미 없는 자모/기호 입력 처리",
+    "protected_reply로 HG Company/LLM/GitHub/퍼리 보호",
+    "creative 모드에서도 지식 질문은 검색/보호 우선",
+    "Actions artifact 중첩 zip 제거"
   ]
 }
