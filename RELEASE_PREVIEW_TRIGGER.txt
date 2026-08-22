@@ -1,0 +1,2 @@
+trigger: 2026-08-22T21:05+09:00
+purpose: build and publish HGAI v10 preview checkpoint
