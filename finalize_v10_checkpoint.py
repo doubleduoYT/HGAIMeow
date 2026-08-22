@@ -20,9 +20,13 @@ def main():
     if rp.exists():
         nr=json.loads(rp.read_text(encoding="utf-8"))
         if not nr.get("gate_passed",False): raise SystemExit("raw-neural report did not pass")
+    # Runtime neural generation is enabled only after all final gates have passed.
     ck["artifact_ready"]=True
     ck["raw_neural_gate"]=True
     ck["hybrid_gate"]=True
+    ck["semantic_ready"]=True
+    ck["raw_neural_passed"]=int(nr.get("passed",0)) if nr else 0
+    ck["raw_neural_total"]=int(nr.get("total",0)) if nr else 0
     for k in ("resume_model","optimizer","rng_state"):
         ck.pop(k,None)
     torch.save(ck,p)
@@ -31,10 +35,10 @@ def main():
         "best_step":int(ck.get("best_step",0)),"best_val":float(ck.get("best_val",999)),
         "last_val":float(ck.get("last_val",999)),"params":int(ck.get("params",0)),
         "dataset_hash":ck.get("dataset_hash"),"trainer":ck.get("trainer"),
-        "raw_neural_passed":int(nr.get("passed",0)) if nr else None,
-        "raw_neural_total":int(nr.get("total",0)) if nr else None,
+        "raw_neural_passed":ck["raw_neural_passed"],
+        "raw_neural_total":ck["raw_neural_total"],
         "raw_neural_semantic_gate":bool(nr.get("gate_passed",True)) if nr else True,
-        "hybrid_regression":"passed","artifact_ready":True,
+        "hybrid_regression":"passed","semantic_ready":True,"artifact_ready":True,
         "training_state_stripped":True,
     }
     Path(args.status_file).write_text(json.dumps(status,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
