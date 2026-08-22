@@ -144,13 +144,13 @@ def train(args):
                 "step":step+1,"best_step":best_step,"best_val":best,"last_val":last_val,
                 "params":h.count_params(model),"dataset_hash":data_hash,"artifact_ready":False,
                 "semantic_ready":False,"raw_neural_gate":False,"hybrid_gate":False,
-                "trainer":"quality-v2","focus_core_pairs":len(core),
+                "trainer":"quality-v1","trainer_revision":2,"focus_core_pairs":len(core),
                 "focus_schedule":[0.58,0.45,0.32],"context_prob_general":0.22,"context_prob_core":0.08
             },args.model_file)
 
     result={"step":start+args.steps,"best_step":best_step,"best_val":best,"last_val":last_val,
             "last_loss":last_loss,"params":h.count_params(model),"pairs":len(pairs),"core_pairs":len(core),
-            "dataset_hash":data_hash,"trainer":"quality-v2","focus_schedule":[.58,.45,.32],
+            "dataset_hash":data_hash,"trainer":"quality-v1","trainer_revision":2,"focus_schedule":[.58,.45,.32],
             "context_prob_general":.22,"context_prob_core":.08}
     print(json.dumps(result,ensure_ascii=False,indent=2))
 
