@@ -1,12 +1,5 @@
 name: Train HGAI v10 Practical
 
-permissions:
-  contents: write
-
-concurrency:
-  group: hgai-v10-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 on:
   workflow_dispatch:
     inputs:
@@ -36,6 +29,8 @@ on:
       - "hgai_core.py"
       - "run_hgai.py"
       - "build_dataset.py"
+      - "train_v10_quality.py"
+      - "finalize_v10_checkpoint.py"
       - "train.txt"
       - "train_v10_extra.txt"
       - "knowledge.json"
@@ -52,6 +47,8 @@ on:
       - "hgai_core.py"
       - "run_hgai.py"
       - "build_dataset.py"
+      - "train_v10_quality.py"
+      - "finalize_v10_checkpoint.py"
       - "train.txt"
       - "train_v10_extra.txt"
       - "knowledge.json"
@@ -60,11 +57,15 @@ on:
       - "evaluate_neural_v10.py"
       - ".github/workflows/train.yml"
 
+concurrency:
+  group: hgai-v10-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   pr-smoke:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -76,7 +77,7 @@ jobs:
           pip install torch
       - name: Compile and deterministic dataset check
         run: |
-          python -m py_compile hgai_core.py run_hgai.py build_dataset.py evaluate_v10.py evaluate_neural_v10.py teacher_reference.py
+          python -m py_compile hgai_core.py run_hgai.py build_dataset.py train_v10_quality.py finalize_v10_checkpoint.py evaluate_v10.py evaluate_neural_v10.py teacher_reference.py
           python build_dataset.py --max-variants 12
           cp augmented_train.txt /tmp/augmented_train.first.txt
           cp DATASET_REPORT_V10.json /tmp/report.first.json
@@ -87,18 +88,21 @@ jobs:
       - name: Search and diversity regression
         run: |
           python evaluate_v10.py --mode search --model-file does-not-exist.pth
-      - name: Two-step neural training smoke
+      - name: Quality trainer and resume smoke
         run: |
-          python run_hgai.py --retrain --preset main --steps 2 --threads 2 --seed 20260822 --model-file /tmp/hgai_smoke.pth
+          python train_v10_quality.py --preset main --steps 2 --threads 2 --seed 20260822 --model-file /tmp/hgai_smoke.pth
+          python train_v10_quality.py --resume --preset main --steps 1 --threads 2 --seed 20260822 --model-file /tmp/hgai_smoke.pth
           python - <<'PY'
           from hgai_core import checkpoint_load
           c=checkpoint_load('/tmp/hgai_smoke.pth') or {}
           assert c.get('version') == 'hgai-v10'
           assert c.get('preset') == 'main'
-          assert int(c.get('step',0)) == 2
-          assert int(c.get('best_step',0)) in (1,2)
+          assert c.get('trainer') == 'quality-v1'
+          assert int(c.get('step',0)) == 3
+          assert int(c.get('best_step',0)) in (1,2,3)
           assert c.get('dataset_hash')
-          print('checkpoint smoke PASS', {k:c.get(k) for k in ['step','best_step','best_val','last_val','params','dataset_hash']})
+          assert c.get('resume_model') and c.get('optimizer') and c.get('rng_state')
+          print('quality resume smoke PASS', {k:c.get(k) for k in ['step','best_step','best_val','last_val','params','dataset_hash','trainer']})
           PY
       - name: Ensure raw-neural really bypasses retrieval
         run: |
@@ -107,10 +111,10 @@ jobs:
           code=$?
           set -e
           if [ "$code" -eq 0 ]; then
-            echo "A two-step random model unexpectedly passed raw-neural semantics; the test may be leaking retrieval."
+            echo "A three-step model unexpectedly passed raw-neural semantics; retrieval may be leaking."
             exit 1
           fi
-          echo "raw-neural isolation PASS (untrained model correctly failed semantic gate)"
+          echo "raw-neural isolation PASS"
 
   train:
     if: github.event_name != 'pull_request'
@@ -132,13 +136,13 @@ jobs:
           pip install torch
       - name: Compile and validate source
         run: |
-          python -m py_compile hgai_core.py run_hgai.py build_dataset.py evaluate_v10.py evaluate_neural_v10.py teacher_reference.py
+          python -m py_compile hgai_core.py run_hgai.py build_dataset.py train_v10_quality.py finalize_v10_checkpoint.py evaluate_v10.py evaluate_neural_v10.py teacher_reference.py
           python build_dataset.py --max-variants 12
           cat DATASET_REPORT_V10.json
           python evaluate_v10.py --mode search --model-file does-not-exist.pth
       - name: Train standalone HGAI model
         run: |
-          python run_hgai.py --retrain --preset "$PRESET" --steps "$STEPS" --threads 2 --model-file hgai_model_v10.pth
+          python train_v10_quality.py --preset "$PRESET" --steps "$STEPS" --threads 2 --model-file hgai_model_v10.pth
       - name: Continue training when validation gate needs it
         shell: bash
         run: |
@@ -148,14 +152,14 @@ jobs:
           from hgai_core import checkpoint_load
           c=checkpoint_load('hgai_model_v10.pth') or {}
           step=int(c.get('step',0)); best=float(c.get('best_val',999)); best_step=int(c.get('best_step',0))
-          print(f'checkpoint after initial train: step={step} best_val={best:.4f} best_step={best_step}')
+          print(f'checkpoint after initial train: step={step} raw_best_val={best:.4f} best_step={best_step}')
           sys.exit(0 if step >= 1500 and best <= 2.8 else 42)
           PY
           ready=$?
           set -e
           if [ "$ready" -ne 0 ]; then
             echo "Validation gate not met; resuming for ${EXTRA_STEPS} steps"
-            python run_hgai.py --resume --preset "$PRESET" --steps "$EXTRA_STEPS" --threads 2 --model-file hgai_model_v10.pth
+            python train_v10_quality.py --resume --preset "$PRESET" --steps "$EXTRA_STEPS" --threads 2 --model-file hgai_model_v10.pth
           fi
       - name: Raw-neural semantic gate with one recovery round
         shell: bash
@@ -166,53 +170,30 @@ jobs:
           set -e
           if [ "$neural" -ne 0 ]; then
             echo "Raw-neural gate not met; resuming for ${NEURAL_EXTRA_STEPS} steps"
-            python run_hgai.py --resume --preset "$PRESET" --steps "$NEURAL_EXTRA_STEPS" --threads 2 --model-file hgai_model_v10.pth
+            python train_v10_quality.py --resume --preset "$PRESET" --steps "$NEURAL_EXTRA_STEPS" --threads 2 --model-file hgai_model_v10.pth
           fi
       - name: Final validation and raw-neural gates
         run: |
           python - <<'PY'
-          import json
           from hgai_core import checkpoint_load
           c=checkpoint_load('hgai_model_v10.pth') or {}
-          report={
-            'version':c.get('version'),
-            'preset':c.get('preset'),
-            'step':int(c.get('step',0)),
-            'best_step':int(c.get('best_step',0)),
-            'best_val':float(c.get('best_val',999)),
-            'last_val':float(c.get('last_val',999)),
-            'params':int(c.get('params',0)),
-            'dataset_hash':c.get('dataset_hash'),
-          }
-          report['validation_ready']=report['step'] >= 1500 and report['best_val'] <= 2.8
-          print(json.dumps(report,ensure_ascii=False,indent=2))
-          if not report['validation_ready']:
-            raise SystemExit('checkpoint did not reach validation quality gate')
-          open('MODEL_STATUS_RUNTIME.json','w',encoding='utf-8').write(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+          step=int(c.get('step',0)); best=float(c.get('best_val',999)); best_step=int(c.get('best_step',0))
+          print(f'final checkpoint: step={step} raw_best_val={best:.4f} best_step={best_step}')
+          if step < 1500 or best > 2.8:
+              raise SystemExit('checkpoint did not reach raw validation gate')
           PY
-          python evaluate_neural_v10.py --model-file hgai_model_v10.pth --preset "$PRESET" --min-pass 7 --report NEURAL_EVAL_RUNTIME.json
+          python evaluate_neural_v10.py --model-file hgai_model_v10.pth --preset "$PRESET" --min-pass 7
       - name: Practical hybrid regression
         run: |
-          python run_hgai.py --info --preset "$PRESET" --model-file hgai_model_v10.pth
           python evaluate_v10.py --mode hybrid --preset "$PRESET" --model-file hgai_model_v10.pth
-      - name: Mark model artifact ready
+      - name: Finalize deployable checkpoint
         run: |
-          python - <<'PY'
-          import json
-          p='MODEL_STATUS_RUNTIME.json'
-          d=json.load(open(p,encoding='utf-8'))
-          n=json.load(open('NEURAL_EVAL_RUNTIME.json',encoding='utf-8'))
-          d['raw_neural_passed']=int(n['passed'])
-          d['raw_neural_total']=int(n['total'])
-          d['raw_neural_semantic_gate']=bool(n['gate_passed'])
-          d['hybrid_regression']='passed'
-          d['artifact_ready']=True
-          open(p,'w',encoding='utf-8').write(json.dumps(d,ensure_ascii=False,indent=2)+'\n')
-          PY
+          python finalize_v10_checkpoint.py --model-file hgai_model_v10.pth --status-file MODEL_STATUS_RUNTIME.json
+          python run_hgai.py --info --preset "$PRESET" --model-file hgai_model_v10.pth
       - name: Prepare artifact
         run: |
           mkdir -p dist
-          cp hgai_core.py run_hgai.py build_dataset.py teacher_reference.py train.txt train_v10_extra.txt augmented_train.txt knowledge.json personality.json eval_v10.json evaluate_v10.py evaluate_neural_v10.py requirements.txt README.md DATASET_REPORT_V10.json MODEL_STATUS_RUNTIME.json NEURAL_EVAL_RUNTIME.json hgai_model_v10.pth dist/
+          cp hgai_core.py run_hgai.py build_dataset.py train_v10_quality.py finalize_v10_checkpoint.py teacher_reference.py train.txt train_v10_extra.txt augmented_train.txt knowledge.json personality.json eval_v10.json evaluate_v10.py evaluate_neural_v10.py requirements.txt README.md DATASET_REPORT_V10.json MODEL_STATUS_RUNTIME.json hgai_model_v10.pth dist/
           ls -lah dist
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -220,38 +201,3 @@ jobs:
           name: hgai-v10-${{ env.PRESET }}
           path: dist/*
           if-no-files-found: error
-      - name: Persist training run locator
-        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        env:
-          RUN_ID: ${{ github.run_id }}
-          RUN_NUMBER: ${{ github.run_number }}
-          RUN_ATTEMPT: ${{ github.run_attempt }}
-          JOB_STATUS: ${{ job.status }}
-          TRIGGER_SHA: ${{ github.sha }}
-          PRESET_NAME: ${{ env.PRESET }}
-        run: |
-          python - <<'PY'
-          import datetime, json, os
-          d={
-            'workflow':'Train HGAI v10 Practical',
-            'run_id':int(os.environ['RUN_ID']),
-            'run_number':int(os.environ['RUN_NUMBER']),
-            'run_attempt':int(os.environ['RUN_ATTEMPT']),
-            'job_status':os.environ['JOB_STATUS'],
-            'trigger_sha':os.environ['TRIGGER_SHA'],
-            'preset':os.environ['PRESET_NAME'],
-            'artifact_name':'hgai-v10-'+os.environ['PRESET_NAME'],
-            'recorded_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
-          }
-          open('TRAINING_RUN.json','w',encoding='utf-8').write(json.dumps(d,ensure_ascii=False,indent=2)+'\n')
-          PY
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git restore DATASET_REPORT_V10.json 2>/dev/null || true
-          git add TRAINING_RUN.json
-          if git diff --cached --quiet; then
-            exit 0
-          fi
-          git commit -m "Record HGAI training run ${RUN_ID} [skip ci]"
-          git pull --rebase origin main
-          git push origin HEAD:main
