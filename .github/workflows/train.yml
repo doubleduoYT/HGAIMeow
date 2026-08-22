@@ -1,49 +1,48 @@
-name: Train HGAI v8
+name: Train HGAI v10 Practical
 
 on:
   workflow_dispatch:
     inputs:
       preset:
-        description: "model preset"
+        description: "HGAI model preset"
         required: true
-        default: "mid-safe"
+        default: "main"
         type: choice
         options:
-          - tiny
-          - phone
-          - mid-safe
-          - mid-plus
-          - pc
+          - main
+          - large
       steps:
-        description: "training steps"
+        description: "initial training steps"
         required: true
-        default: "6000"
-      generation_mode:
-        description: "benchmark generation mode"
+        default: "2500"
+      extra_steps:
+        description: "extra steps when neural-ready gate is not met"
         required: true
-        default: "safe"
-        type: choice
-        options:
-          - safe
-          - creative
-          - off
+        default: "1500"
   push:
-    branches: [ main, master ]
+    branches: [ main, master, hgai-v10-practical ]
     paths:
+      - "hgai_core.py"
       - "run_hgai.py"
+      - "build_dataset.py"
       - "train.txt"
+      - "train_v10_extra.txt"
       - "knowledge.json"
       - "personality.json"
-      - "eval_tests.json"
+      - "eval_v10.json"
+      - "evaluate_v10.py"
+      - "teacher_reference.py"
+      - "README.md"
       - ".github/workflows/train.yml"
 
 jobs:
   train:
     runs-on: ubuntu-latest
+    timeout-minutes: 350
     env:
-      PRESET: ${{ github.event.inputs.preset || 'mid-safe' }}
-      STEPS: ${{ github.event.inputs.steps || '6000' }}
-      GENMODE: ${{ github.event.inputs.generation_mode || 'safe' }}
+      PRESET: ${{ github.event.inputs.preset || 'main' }}
+      STEPS: ${{ github.event.inputs.steps || '2500' }}
+      EXTRA_STEPS: ${{ github.event.inputs.extra_steps || '1500' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -56,30 +55,71 @@ jobs:
           python -m pip install --upgrade pip
           pip install torch
 
-      - name: Validate dataset
+      - name: Compile and validate source
         run: |
-          python validate_dataset.py
-          python run_hgai.py --validate --lite
+          python -m py_compile hgai_core.py run_hgai.py build_dataset.py evaluate_v10.py teacher_reference.py
+          python build_dataset.py --max-variants 12
+          cat DATASET_REPORT_V10.json
+          python evaluate_v10.py --mode search --model-file does-not-exist.pth
 
-      - name: Train model
+      - name: Train standalone HGAI model
         run: |
-          python run_hgai.py --retrain --preset "$PRESET" --steps "$STEPS" --threads 2
+          python run_hgai.py --retrain --preset "$PRESET" --steps "$STEPS" --threads 2 --model-file hgai_model_v10.pth
 
-      - name: Info and benchmark
+      - name: Continue training when quality gate needs it
+        shell: bash
         run: |
-          python run_hgai.py --info --preset "$PRESET"
-          python run_hgai.py --benchmark --preset "$PRESET" --generation-mode "$GENMODE"
-          python run_hgai.py --eval --preset "$PRESET" --generation-mode safe
+          set +e
+          python - <<'PY'
+          import sys
+          from hgai_core import checkpoint_load
+          c=checkpoint_load('hgai_model_v10.pth') or {}
+          step=int(c.get('step',0)); best=float(c.get('best_val',999))
+          print(f'checkpoint after initial train: step={step} best_val={best:.4f}')
+          sys.exit(0 if step >= 1500 and best <= 2.8 else 42)
+          PY
+          ready=$?
+          set -e
+          if [ "$ready" -ne 0 ]; then
+            echo "Neural-ready gate not met; resuming for ${EXTRA_STEPS} steps"
+            python run_hgai.py --resume --preset "$PRESET" --steps "$EXTRA_STEPS" --threads 2 --model-file hgai_model_v10.pth
+          fi
+
+      - name: Final neural-ready gate
+        run: |
+          python - <<'PY'
+          import json, sys
+          from hgai_core import checkpoint_load
+          c=checkpoint_load('hgai_model_v10.pth') or {}
+          report={
+            'version':c.get('version'),
+            'preset':c.get('preset'),
+            'step':int(c.get('step',0)),
+            'best_val':float(c.get('best_val',999)),
+            'last_val':float(c.get('last_val',999)),
+            'params':int(c.get('params',0)),
+          }
+          report['neural_ready']=report['step'] >= 1500 and report['best_val'] <= 2.8
+          print(json.dumps(report,ensure_ascii=False,indent=2))
+          open('MODEL_STATUS_RUNTIME.json','w',encoding='utf-8').write(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+          if not report['neural_ready']:
+            raise SystemExit('checkpoint did not reach the neural-ready quality gate')
+          PY
+
+      - name: Practical hybrid regression
+        run: |
+          python run_hgai.py --info --preset "$PRESET" --model-file hgai_model_v10.pth
+          python evaluate_v10.py --mode hybrid --preset "$PRESET" --model-file hgai_model_v10.pth
 
       - name: Prepare artifact
         run: |
           mkdir -p dist
-          cp run_hgai.py train.txt knowledge.json personality.json eval_tests.json validate_dataset.py requirements.txt README.md TERMUX_TORCH_GUIDE.txt DATASET_REPORT.json hgai_model.pth dist/
+          cp hgai_core.py run_hgai.py build_dataset.py teacher_reference.py train.txt train_v10_extra.txt augmented_train.txt knowledge.json personality.json eval_v10.json evaluate_v10.py requirements.txt README.md DATASET_REPORT_V10.json MODEL_STATUS_RUNTIME.json hgai_model_v10.pth dist/
           ls -lah dist
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: hgai-v8-model-${{ env.PRESET }}
+          name: hgai-v10-${{ env.PRESET }}
           path: dist/*
           if-no-files-found: error
