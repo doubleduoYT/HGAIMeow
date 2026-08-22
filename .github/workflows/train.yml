@@ -34,9 +34,61 @@ on:
       - "teacher_reference.py"
       - "README.md"
       - ".github/workflows/train.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "hgai_core.py"
+      - "run_hgai.py"
+      - "build_dataset.py"
+      - "train.txt"
+      - "train_v10_extra.txt"
+      - "eval_v10.json"
+      - "evaluate_v10.py"
+      - ".github/workflows/train.yml"
 
 jobs:
+  pr-smoke:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch
+      - name: Compile and deterministic dataset check
+        run: |
+          python -m py_compile hgai_core.py run_hgai.py build_dataset.py evaluate_v10.py teacher_reference.py
+          python build_dataset.py --max-variants 12
+          cp augmented_train.txt /tmp/augmented_train.first.txt
+          cp DATASET_REPORT_V10.json /tmp/report.first.json
+          python build_dataset.py --max-variants 12
+          cmp augmented_train.txt /tmp/augmented_train.first.txt
+          cmp DATASET_REPORT_V10.json /tmp/report.first.json
+          cat DATASET_REPORT_V10.json
+      - name: Search and diversity regression
+        run: |
+          python evaluate_v10.py --mode search --model-file does-not-exist.pth
+      - name: Two-step neural training smoke
+        run: |
+          python run_hgai.py --retrain --preset main --steps 2 --threads 2 --seed 20260822 --model-file /tmp/hgai_smoke.pth
+          python - <<'PY'
+          from hgai_core import checkpoint_load
+          c=checkpoint_load('/tmp/hgai_smoke.pth') or {}
+          assert c.get('version') == 'hgai-v10'
+          assert c.get('preset') == 'main'
+          assert int(c.get('step',0)) == 2
+          assert int(c.get('best_step',0)) in (1,2)
+          assert c.get('dataset_hash')
+          print('checkpoint smoke PASS', {k:c.get(k) for k in ['step','best_step','best_val','last_val','params','dataset_hash']})
+          PY
+
   train:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 350
     env:
@@ -74,8 +126,8 @@ jobs:
           import sys
           from hgai_core import checkpoint_load
           c=checkpoint_load('hgai_model_v10.pth') or {}
-          step=int(c.get('step',0)); best=float(c.get('best_val',999))
-          print(f'checkpoint after initial train: step={step} best_val={best:.4f}')
+          step=int(c.get('step',0)); best=float(c.get('best_val',999)); best_step=int(c.get('best_step',0))
+          print(f'checkpoint after initial train: step={step} best_val={best:.4f} best_step={best_step}')
           sys.exit(0 if step >= 1500 and best <= 2.8 else 42)
           PY
           ready=$?
@@ -88,16 +140,18 @@ jobs:
       - name: Final neural-ready gate
         run: |
           python - <<'PY'
-          import json, sys
+          import json
           from hgai_core import checkpoint_load
           c=checkpoint_load('hgai_model_v10.pth') or {}
           report={
             'version':c.get('version'),
             'preset':c.get('preset'),
             'step':int(c.get('step',0)),
+            'best_step':int(c.get('best_step',0)),
             'best_val':float(c.get('best_val',999)),
             'last_val':float(c.get('last_val',999)),
             'params':int(c.get('params',0)),
+            'dataset_hash':c.get('dataset_hash'),
           }
           report['neural_ready']=report['step'] >= 1500 and report['best_val'] <= 2.8
           print(json.dumps(report,ensure_ascii=False,indent=2))
