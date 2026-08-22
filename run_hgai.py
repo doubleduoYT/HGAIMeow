@@ -1,10 +1,62 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, json
+import argparse, hashlib, json
 from pathlib import Path
 
+import hgai_core as _core
 from hgai_core import BASE_DIR, HGAIEngine, PRESETS, checkpoint_load, train_model
 from build_dataset import expand_pairs, parse_pairs
+
+
+def _focus_training_pairs(train_file: Path):
+    """Curated/required HGAI knowledge for weighted SFT, excluding validation questions."""
+    extra=[]
+    extra_path=train_file.with_name("train_v10_extra.txt")
+    if extra_path.exists():
+        extra += parse_pairs(extra_path.read_text(encoding="utf-8"))
+    # expand_pairs always adds curated_pairs(), which also absorbs knowledge.json.
+    pairs=expand_pairs(extra,max_variants=12)
+    # Keep the same deterministic 2% validation split out of the focus sampler.
+    return [
+        (q,a) for q,a in pairs
+        if int(hashlib.md5(q.encode()).hexdigest()[:8],16)%100 >= 2
+    ]
+
+
+def _install_focus_sampler(train_file: Path, ratio: float):
+    """Mix core HGAI facts into training without contaminating eval_loss validation batches."""
+    ratio=max(0.0,min(0.95,float(ratio)))
+    if ratio <= 0:
+        return 0
+    focus=_focus_training_pairs(train_file)
+    if not focus:
+        return 0
+    original_batch=_core.batch
+
+    def make_batch(tok,cfg,pool,device,rng,context_prob):
+        xs=[
+            _core.example(tok,cfg,*pool[rng.randrange(len(pool))],rng.random()<context_prob)
+            for _ in range(cfg["batch_size"])
+        ]
+        T=max(len(x[0]) for x in xs)
+        xb=_core.torch.full((len(xs),T),tok.pad,dtype=_core.torch.long)
+        yb=_core.torch.full((len(xs),T),-100,dtype=_core.torch.long)
+        for i,(ids,labels) in enumerate(xs):
+            xb[i,:len(ids)]=_core.torch.tensor(ids)
+            yb[i,:len(labels)]=_core.torch.tensor(labels)
+        return xb.to(device),yb.to(device)
+
+    def mixed_batch(tok,cfg,pairs,device,rng):
+        # train split is ~100k pairs; validation is ~2k. Never focus-sample validation.
+        if len(pairs) > 20000:
+            if rng.random() < ratio:
+                # Raw generation is the priority for core facts; context-copy examples stay rare.
+                return make_batch(tok,cfg,focus,device,rng,0.10)
+            return make_batch(tok,cfg,pairs,device,rng,0.25)
+        return original_batch(tok,cfg,pairs,device,rng)
+
+    _core.batch=mixed_batch
+    return len(focus)
 
 
 def main():
@@ -19,6 +71,7 @@ def main():
     ap.add_argument("--seed",type=int,default=None,help="재현이 필요할 때만 고정. 기본은 매 실행 랜덤")
     ap.add_argument("--threads",type=int,default=0)
     ap.add_argument("--device",default="auto",choices=["auto","cpu","cuda"])
+    ap.add_argument("--focus-ratio",type=float,default=0.55,help="학습 배치 중 curated/required 핵심 지식 비율")
     ap.add_argument("--once")
     ap.add_argument("--mode",default="hybrid",choices=["hybrid","neural","raw-neural","search"])
     ap.add_argument("--temperature",type=float,default=0.72)
@@ -33,7 +86,10 @@ def main():
 
     train_file=Path(args.train_file); model_file=Path(args.model_file)
     if args.export_dataset:
-        base=parse_pairs(train_file.read_text(encoding="utf-8")); pairs=expand_pairs(base,max_variants=12)
+        base=parse_pairs(train_file.read_text(encoding="utf-8"))
+        extra_path=train_file.with_name("train_v10_extra.txt")
+        if extra_path.exists(): base += parse_pairs(extra_path.read_text(encoding="utf-8"))
+        pairs=expand_pairs(base,max_variants=12)
         Path(args.export_dataset).write_text("\n".join(f"{q}={a}" for q,a in pairs)+"\n",encoding="utf-8")
         print(f"exported {len(pairs):,} pairs -> {args.export_dataset}")
         return 0
@@ -41,7 +97,11 @@ def main():
     trained_now=False
     if args.retrain or args.resume:
         if args.seed is None: args.seed=1337
+        focus_count=_install_focus_sampler(train_file,args.focus_ratio)
+        print(f"focus sampler: ratio={args.focus_ratio:.2f}, train-only core pairs={focus_count:,}")
         _,_,_,report=train_model(train_file,model_file,preset=args.preset,steps=args.steps,lr=args.lr,seed=args.seed,device=args.device,resume=args.resume,threads=args.threads,status=print)
+        report["focus_ratio"]=args.focus_ratio
+        report["focus_pairs"]=focus_count
         print(json.dumps(report,ensure_ascii=False,indent=2))
         trained_now=True
 
