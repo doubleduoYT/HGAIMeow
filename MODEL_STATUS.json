@@ -3,14 +3,20 @@
   "default_preset": "main",
   "phone_preset_removed": true,
   "runtime_external_llm_required": false,
-  "effective_training_pairs": 102725,
-  "regression_search": "30/30",
-  "regression_hybrid": "30/30",
+  "effective_training_pairs": 102723,
+  "unique_training_questions": 86379,
+  "regression_search": "30/30 + diversity PASS",
+  "regression_hybrid": "30/30 + diversity PASS",
   "bootstrap_checkpoint": {
     "preset": "main",
     "step": 120,
     "best_validation_loss": 3.7961084842681885,
     "neural_ready": false,
     "note": "검색/지식 기반 실사용은 가능. 자체 신경망 자동 생성은 품질 gate 통과 후 활성화."
+  },
+  "github_training_gate": {
+    "initial_steps": 2500,
+    "extra_steps_if_needed": 1500,
+    "ready_when": "step >= 1500 and best_val <= 2.8"
   }
 }
