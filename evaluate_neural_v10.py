@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import argparse
+import json
 import re
+from pathlib import Path
 import torch
 from hgai_core import HGAIEngine
 
@@ -32,11 +34,13 @@ def main():
     ap.add_argument("--preset", default="main")
     ap.add_argument("--min-pass", type=int, default=7)
     ap.add_argument("--seed", type=int, default=20260822)
+    ap.add_argument("--report", default="", help="optional JSON report path")
     args=ap.parse_args()
     e=HGAIEngine("train.txt", args.model_file, args.preset, seed=args.seed, load_model=True)
     if e.model is None:
         raise SystemExit("model not loaded")
     passed=0
+    rows=[]
     for i,(q,groups) in enumerate(TESTS,1):
         torch.manual_seed(args.seed+i)
         if torch.cuda.is_available(): torch.cuda.manual_seed_all(args.seed+i)
@@ -44,7 +48,21 @@ def main():
         a=e.reply(q, mode="raw-neural", temperature=.58, top_k=20, top_p=.88, max_new_tokens=80)
         good=semantic_pass(a,groups)
         passed+=good
+        rows.append({"index":i,"question":q,"answer":a,"passed":bool(good),"required_groups":groups})
         print(("OK" if good else "FAIL"), i, q, "=>", a)
+    report={
+        "preset":args.preset,
+        "model_file":args.model_file,
+        "seed":args.seed,
+        "passed":passed,
+        "total":len(TESTS),
+        "required":args.min_pass,
+        "gate_passed":passed >= args.min_pass,
+        "tests":rows,
+    }
+    if args.report:
+        Path(args.report).write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+        print("report:",args.report)
     print(f"raw-neural semantic eval {passed}/{len(TESTS)}; required={args.min_pass}")
     raise SystemExit(0 if passed >= args.min_pass else 1)
 
