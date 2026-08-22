@@ -1,5 +1,12 @@
 name: Train HGAI v10 Practical
 
+permissions:
+  contents: write
+
+concurrency:
+  group: hgai-v10-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
     inputs:
@@ -183,7 +190,7 @@ jobs:
             raise SystemExit('checkpoint did not reach validation quality gate')
           open('MODEL_STATUS_RUNTIME.json','w',encoding='utf-8').write(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
           PY
-          python evaluate_neural_v10.py --model-file hgai_model_v10.pth --preset "$PRESET" --min-pass 7
+          python evaluate_neural_v10.py --model-file hgai_model_v10.pth --preset "$PRESET" --min-pass 7 --report NEURAL_EVAL_RUNTIME.json
       - name: Practical hybrid regression
         run: |
           python run_hgai.py --info --preset "$PRESET" --model-file hgai_model_v10.pth
@@ -194,7 +201,10 @@ jobs:
           import json
           p='MODEL_STATUS_RUNTIME.json'
           d=json.load(open(p,encoding='utf-8'))
-          d['raw_neural_semantic_gate']='passed_7_of_10_or_better'
+          n=json.load(open('NEURAL_EVAL_RUNTIME.json',encoding='utf-8'))
+          d['raw_neural_passed']=int(n['passed'])
+          d['raw_neural_total']=int(n['total'])
+          d['raw_neural_semantic_gate']=bool(n['gate_passed'])
           d['hybrid_regression']='passed'
           d['artifact_ready']=True
           open(p,'w',encoding='utf-8').write(json.dumps(d,ensure_ascii=False,indent=2)+'\n')
@@ -202,7 +212,7 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p dist
-          cp hgai_core.py run_hgai.py build_dataset.py teacher_reference.py train.txt train_v10_extra.txt augmented_train.txt knowledge.json personality.json eval_v10.json evaluate_v10.py evaluate_neural_v10.py requirements.txt README.md DATASET_REPORT_V10.json MODEL_STATUS_RUNTIME.json hgai_model_v10.pth dist/
+          cp hgai_core.py run_hgai.py build_dataset.py teacher_reference.py train.txt train_v10_extra.txt augmented_train.txt knowledge.json personality.json eval_v10.json evaluate_v10.py evaluate_neural_v10.py requirements.txt README.md DATASET_REPORT_V10.json MODEL_STATUS_RUNTIME.json NEURAL_EVAL_RUNTIME.json hgai_model_v10.pth dist/
           ls -lah dist
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -210,3 +220,38 @@ jobs:
           name: hgai-v10-${{ env.PRESET }}
           path: dist/*
           if-no-files-found: error
+      - name: Persist training run locator
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RUN_NUMBER: ${{ github.run_number }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          JOB_STATUS: ${{ job.status }}
+          TRIGGER_SHA: ${{ github.sha }}
+          PRESET_NAME: ${{ env.PRESET }}
+        run: |
+          python - <<'PY'
+          import datetime, json, os
+          d={
+            'workflow':'Train HGAI v10 Practical',
+            'run_id':int(os.environ['RUN_ID']),
+            'run_number':int(os.environ['RUN_NUMBER']),
+            'run_attempt':int(os.environ['RUN_ATTEMPT']),
+            'job_status':os.environ['JOB_STATUS'],
+            'trigger_sha':os.environ['TRIGGER_SHA'],
+            'preset':os.environ['PRESET_NAME'],
+            'artifact_name':'hgai-v10-'+os.environ['PRESET_NAME'],
+            'recorded_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+          }
+          open('TRAINING_RUN.json','w',encoding='utf-8').write(json.dumps(d,ensure_ascii=False,indent=2)+'\n')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git restore DATASET_REPORT_V10.json 2>/dev/null || true
+          git add TRAINING_RUN.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Record HGAI training run ${RUN_ID} [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main
