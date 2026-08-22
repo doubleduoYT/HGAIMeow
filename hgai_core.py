@@ -66,7 +66,7 @@ class Retriever:
   scored=[]
   for i in cand:
    seq=difflib.SequenceMatcher(None,nq,self.n[i]).ratio(); qt,qg=self.t[i],self.g[i]
-   tj=len(tq&qt)/max(1,len(tq|qt)); gj=len(gq&qg)/max(1,len(gq|qg)); cont=1.0 if (nq in self.n[i] or self.n[i] in nq) and min(len(nq),len(self.n[i]))>=3 else 0
+   tj=len(tq&qt)/max(1,len(tq|qt)); gj=len(gq&qg)/max(1,len(gq|gq)); cont=1.0 if (nq in self.n[i] or self.n[i] in nq) and min(len(nq),len(self.n[i]))>=3 else 0
    s=min(1,seq*.48+gj*.27+tj*.20+cont*.12)
    if s>=.34: scored.append(Hit(s,*self.pairs[i]))
   scored.sort(key=lambda h:h.score,reverse=True); out=[]; seen=set()
@@ -194,15 +194,21 @@ def train_model(train_file,model_file,preset="main",steps=3000,lr=3e-4,seed=1337
  if not TORCH_AVAILABLE:raise RuntimeError("PyTorch가 필요하다냥")
  if threads>0:torch.set_num_threads(threads)
  random.seed(seed);torch.manual_seed(seed);rng=random.Random(seed);cfg=dict(PRESETS[preset]);pairs=training_pairs(train_file);tr,va=split_pairs(pairs);dev="cuda" if device in ("auto","cuda") and torch.cuda.is_available() else "cpu";ck=checkpoint_load(model_file) if resume else None
+ data_hash=hashlib.sha256("\n".join(f"{q}={a}" for q,a in pairs).encode()).hexdigest()
  if ck and ck.get("version")=="hgai-v10" and ck.get("preset")==preset:
-  tok=Tokenizer(ck["vocab"]);model=HGAIModel(len(tok.vocab),ck["config"]).to(dev);model.load_state_dict(ck["model"]);start=int(ck.get("step",0));best=float(ck.get("best_val",999.));cfg=dict(ck["config"])
- else:tok=Tokenizer(build_vocab(tr,cfg["max_vocab"]));model=HGAIModel(len(tok.vocab),cfg).to(dev);start=0;best=999.
- status(f"HGAI v10 preset={preset} params={count_params(model):,} pairs={len(pairs):,} device={dev}");opt=torch.optim.AdamW(model.parameters(),lr=lr,betas=(.9,.95),weight_decay=.1);total=max(1,start+steps);warm=max(20,min(300,total//20));ev=max(25,min(250,steps//10 if steps>=10 else 1));last=None
+  tok=Tokenizer(ck["vocab"]);model=HGAIModel(len(tok.vocab),ck["config"]).to(dev);model.load_state_dict(ck["model"]);start=int(ck.get("step",0));best=float(ck.get("best_val",999.));best_step=int(ck.get("best_step",start));cfg=dict(ck["config"]);best_state={k:v.detach().cpu().clone() for k,v in model.state_dict().items()}
+ else:
+  tok=Tokenizer(build_vocab(tr,cfg["max_vocab"]));model=HGAIModel(len(tok.vocab),cfg).to(dev);start=0;best=999.;best_step=0;best_state=None
+ status(f"HGAI v10 preset={preset} params={count_params(model):,} pairs={len(pairs):,} device={dev}");opt=torch.optim.AdamW(model.parameters(),lr=lr,betas=(.9,.95),weight_decay=.1);total=max(1,start+steps);warm=max(20,min(300,total//20));ev=max(25,min(250,steps//10 if steps>=10 else 1));last=None;last_val=999.
  for local in range(steps):
-  step=start+local;x,y=batch(tok,cfg,tr,dev,rng);_,loss=model(x,y);last=float(loss);opt.zero_grad(set_to_none=True);loss.backward();torch.nn.utils.clip_grad_norm_(model.parameters(),1.);p=min(1,max(0,(step-warm)/max(1,total-warm)));scale=(step+1)/warm if step<warm else .1+.9*.5*(1+math.cos(math.pi*p));[g.update(lr=lr*max(.05,scale)) for g in opt.param_groups];opt.step()
+  step=start+local;x,y=batch(tok,cfg,tr,dev,rng);_,loss=model(x,y);last=float(loss.detach());opt.zero_grad(set_to_none=True);loss.backward();torch.nn.utils.clip_grad_norm_(model.parameters(),1.);p=min(1,max(0,(step-warm)/max(1,total-warm)));scale=(step+1)/warm if step<warm else .1+.9*.5*(1+math.cos(math.pi*p));[g.update(lr=lr*max(.05,scale)) for g in opt.param_groups];opt.step()
   if local==0 or (local+1)%ev==0 or local==steps-1:
-   vl=eval_loss(model,tok,cfg,va,dev,seed+step);best=min(best,vl);status(f"step {step+1} train={last:.4f} val={vl:.4f}");torch.save({"version":"hgai-v10","preset":preset,"config":cfg,"vocab":tok.vocab,"model":model.state_dict(),"step":step+1,"best_val":best,"last_val":vl,"params":count_params(model)},model_file)
- model.eval();return model,tok,dev,{"pairs":len(pairs),"best_val":best,"last_loss":last,"params":count_params(model),"step":start+steps}
+   vl=eval_loss(model,tok,cfg,va,dev,seed+step);last_val=vl
+   if vl<best:
+    best=vl;best_step=step+1;best_state={k:v.detach().cpu().clone() for k,v in model.state_dict().items()}
+   status(f"step {step+1} train={last:.4f} val={vl:.4f} best={best:.4f}@{best_step}")
+   torch.save({"version":"hgai-v10","preset":preset,"config":cfg,"vocab":tok.vocab,"model":best_state if best_state is not None else model.state_dict(),"step":step+1,"best_step":best_step,"best_val":best,"last_val":last_val,"params":count_params(model),"dataset_hash":data_hash},model_file)
+ model.eval();return model,tok,dev,{"pairs":len(pairs),"best_val":best,"best_step":best_step,"last_val":last_val,"last_loss":last,"params":count_params(model),"step":start+steps,"dataset_hash":data_hash}
 
 @torch.no_grad() if TORCH_AVAILABLE else (lambda f:f)
 def neural_generate(model,tok,device,cfg,user,context=None,history=None,temperature=.72,top_k=40,top_p=.92,max_new_tokens=96,repetition_penalty=1.12,seed=None):
@@ -234,7 +240,7 @@ class HGAIEngine:
   if load_model and TORCH_AVAILABLE:
    c=checkpoint_load(self.model_file)
    if c and c.get("version")=="hgai-v10" and c.get("preset")==preset:
-    self.device="cuda" if device in ("auto","cuda") and torch.cuda.is_available() else "cpu";self.tok=Tokenizer(c["vocab"]);self.cfg=dict(c["config"]);self.model=HGAIModel(len(self.tok.vocab),self.cfg).to(self.device);self.model.load_state_dict(c["model"]);self.model.eval();self.checkpoint_meta={"step":int(c.get("step",0)),"best_val":float(c.get("best_val",999)),"last_val":float(c.get("last_val",999))};self.neural_ready=self.checkpoint_meta["step"]>=1500 and self.checkpoint_meta["best_val"]<=2.8
+    self.device="cuda" if device in ("auto","cuda") and torch.cuda.is_available() else "cpu";self.tok=Tokenizer(c["vocab"]);self.cfg=dict(c["config"]);self.model=HGAIModel(len(self.tok.vocab),self.cfg).to(self.device);self.model.load_state_dict(c["model"]);self.model.eval();self.checkpoint_meta={"step":int(c.get("step",0)),"best_step":int(c.get("best_step",c.get("step",0))),"best_val":float(c.get("best_val",999)),"last_val":float(c.get("last_val",999)),"dataset_hash":c.get("dataset_hash")};self.neural_ready=self.checkpoint_meta["step"]>=1500 and self.checkpoint_meta["best_val"]<=2.8
  def remember_rule(self,q):
   if any(x in q for x in ["내가 방금 뭐라고","방금 내가 뭐라고","내가 아까 뭐라고"]):return f"방금 너는 '{self.history[-1][0]}'라고 말했다냥" if self.history else "아직 앞에서 한 말이 없다냥"
   m=re.search(r"(?:내 이름은|내이름은)\s*([가-힣A-Za-z0-9_\-]{1,24}?)(?:이야|야|이다|다)?$",q)
