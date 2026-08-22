@@ -87,6 +87,10 @@ python evaluate_v10.py --mode hybrid --model-file hgai_model_v10.pth
 
 포함된 30문항 실사용 회귀 테스트는 search/hybrid 경로에서 30/30을 통과하도록 검증했다.
 
+## GitHub Actions
+
+`Train HGAI v10 Practical`은 `main` 또는 `large`만 학습한다. 기본 `main`은 2500 step을 학습하고 neural-ready gate를 통과하지 못하면 1500 step을 자동으로 이어 학습한 뒤 다시 검사한다. gate를 통과한 체크포인트만 artifact 단계까지 진행한다.
+
 ## 외부 모델을 참고만 하기
 
 선택 사항이다.
