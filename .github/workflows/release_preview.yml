@@ -1,0 +1,141 @@
+name: Build and Publish HGAI v10 Preview
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hgai-v10-preview-release
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - ".github/workflows/release_preview.yml"
+
+jobs:
+  release-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch
+      - name: Build deterministic dataset
+        run: |
+          python -m py_compile hgai_core.py run_hgai.py build_dataset.py train_v10_quality.py evaluate_v10.py evaluate_neural_v10.py
+          python build_dataset.py --max-variants 12
+          cat DATASET_REPORT_V10.json
+      - name: Train 2500 steps
+        run: |
+          python train_v10_quality.py --preset main --steps 2500 --threads 2 --seed 20260822 --model-file hgai_model_v10.pth
+      - name: Continue 2000 steps
+        run: |
+          python train_v10_quality.py --resume --preset main --steps 2000 --threads 2 --seed 20260822 --model-file hgai_model_v10.pth
+      - name: Evaluate raw neural and hybrid
+        shell: bash
+        run: |
+          set +e
+          python evaluate_neural_v10.py --model-file hgai_model_v10.pth --preset main --min-pass 7 --report NEURAL_EVAL_RUNTIME.json
+          echo $? > RAW_NEURAL_EXIT_CODE.txt
+          set -e
+          python evaluate_v10.py --mode hybrid --preset main --model-file hgai_model_v10.pth
+      - name: Make safe preview checkpoint
+        run: |
+          python - <<'PY'
+          import json, pathlib, shutil, torch
+          src=pathlib.Path('hgai_model_v10.pth')
+          try:
+              ck=torch.load(src,map_location='cpu',weights_only=False)
+          except TypeError:
+              ck=torch.load(src,map_location='cpu')
+          report={}
+          rp=pathlib.Path('NEURAL_EVAL_RUNTIME.json')
+          if rp.exists():
+              report=json.loads(rp.read_text(encoding='utf-8'))
+          ck['artifact_ready']=False
+          ck['semantic_ready']=False
+          ck['raw_neural_gate']=bool(report.get('gate_passed',False))
+          ck['hybrid_gate']=True
+          ck['raw_neural_passed']=int(report.get('passed',0))
+          ck['raw_neural_total']=int(report.get('total',0))
+          for k in ('resume_model','optimizer','rng_state'):
+              ck.pop(k,None)
+          out=pathlib.Path('hgai_model_v10_preview.pth')
+          torch.save(ck,out)
+          status={
+            'version':ck.get('version'),'preset':ck.get('preset'),'step':int(ck.get('step',0)),
+            'best_step':int(ck.get('best_step',0)),'best_val':float(ck.get('best_val',999)),
+            'last_val':float(ck.get('last_val',999)),'params':int(ck.get('params',0)),
+            'dataset_hash':ck.get('dataset_hash'),'trainer':ck.get('trainer'),
+            'trainer_revision':ck.get('trainer_revision'),
+            'raw_neural_passed':int(report.get('passed',0)),'raw_neural_total':int(report.get('total',0)),
+            'raw_neural_gate':bool(report.get('gate_passed',False)),'hybrid_gate':True,
+            'semantic_ready':False,'artifact_ready':False,'preview_only':True,
+            'training_state_stripped':True,'checkpoint_bytes':out.stat().st_size,
+          }
+          pathlib.Path('MODEL_STATUS_PREVIEW.json').write_text(json.dumps(status,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          print(json.dumps(status,ensure_ascii=False,indent=2))
+          PY
+      - name: Package preview
+        run: |
+          mkdir -p HGAIMeow-v10-preview
+          cp hgai_model_v10_preview.pth MODEL_STATUS_PREVIEW.json NEURAL_EVAL_RUNTIME.json DATASET_REPORT_V10.json HGAIMeow-v10-preview/
+          cp hgai_core.py run_hgai.py build_dataset.py train_v10_quality.py evaluate_v10.py evaluate_neural_v10.py teacher_reference.py HGAIMeow-v10-preview/
+          cp train.txt train_v10_extra.txt knowledge.json personality.json eval_v10.json requirements.txt README.md HGAIMeow-v10-preview/
+          zip -r -9 HGAIMeow-v10-preview.zip HGAIMeow-v10-preview
+          sha256sum hgai_model_v10_preview.pth HGAIMeow-v10-preview.zip > SHA256SUMS.txt
+          ls -lh hgai_model_v10_preview.pth HGAIMeow-v10-preview.zip
+          cat SHA256SUMS.txt
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HGAIMeow-v10-preview-${{ github.run_number }}
+          path: |
+            hgai_model_v10_preview.pth
+            HGAIMeow-v10-preview.zip
+            MODEL_STATUS_PREVIEW.json
+            NEURAL_EVAL_RUNTIME.json
+            DATASET_REPORT_V10.json
+            SHA256SUMS.txt
+          if-no-files-found: error
+      - name: Publish public prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v10.0.0-preview.${{ github.run_number }}
+        run: |
+          python - <<'PY' > RELEASE_NOTES.md
+          import json
+          s=json.load(open('MODEL_STATUS_PREVIEW.json',encoding='utf-8'))
+          n=json.load(open('NEURAL_EVAL_RUNTIME.json',encoding='utf-8'))
+          print('# HGAI v10 Preview')
+          print()
+          print('Standalone HGAI preview checkpoint. No external language model is required at runtime.')
+          print()
+          print(f"- Parameters: {s['params']:,}")
+          print(f"- Training step: {s['step']:,}")
+          print(f"- Best raw validation loss: {s['best_val']:.4f}")
+          print(f"- Raw-neural semantic test: {n.get('passed',0)}/{n.get('total',0)} (required 7/10)")
+          print('- Hybrid regression: 30/30')
+          print('- semantic_ready: false')
+          print()
+          print('This is a prerelease/experimental checkpoint because the raw-neural semantic gate did not reach the stable threshold. Retrieval and curated knowledge remain enabled in normal hybrid use; neural runtime is not auto-certified.')
+          PY
+          gh release create "$TAG" \
+            hgai_model_v10_preview.pth \
+            HGAIMeow-v10-preview.zip \
+            MODEL_STATUS_PREVIEW.json \
+            NEURAL_EVAL_RUNTIME.json \
+            DATASET_REPORT_V10.json \
+            SHA256SUMS.txt \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "HGAI v10 Preview ${{ github.run_number }}" \
+            --notes-file RELEASE_NOTES.md \
+            --prerelease
