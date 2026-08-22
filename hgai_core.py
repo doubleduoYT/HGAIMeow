@@ -251,11 +251,11 @@ class HGAIEngine:
  def reply(self,user,mode="hybrid",temperature=.72,top_k=40,top_p=.92,max_new_tokens=96):
   q=clean_text(user)
   if not q:return "냥? 뭔가 말해줘라냥 :3"
+  if mode=="raw-neural":
+   g=neural_generate(self.model,self.tok,self.device,self.cfg,q,None,self.history,temperature,top_k,top_p,max_new_tokens) if self.model else None;a=fix_nyang(g) if quality_ok(g) else "순수 신경망 생성이 아직 불안정하다냥";self._save(q,a);return a
   for fn in (self.remember_rule,calculator_reply,curated_direct_reply):
    a=fn(q)
    if a:self._save(q,a);return a
-  if mode=="raw-neural":
-   g=neural_generate(self.model,self.tok,self.device,self.cfg,q,None,self.history,temperature,top_k,top_p,max_new_tokens) if self.model else None;a=fix_nyang(g) if quality_ok(g) else "순수 신경망 생성이 아직 불안정하다냥";self._save(q,a);return a
   ex=self.retriever.exact_answers(q)
   if ex:a=fix_nyang(self.rng.choice(ex));self._save(q,a);return a
   hits=self.retriever.search(q);best=hits[0] if hits else None
