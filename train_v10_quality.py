@@ -22,12 +22,14 @@ def load_training_pairs(train_file: str):
     return h.training_pairs(tf)
 
 
-def make_batch(tok,cfg,pairs,device,rng,ctx_prob=.30,focus_pairs=None,focus_prob=0.0):
+def make_batch(tok,cfg,pairs,device,rng,ctx_prob=.22,focus_pairs=None,focus_prob=0.0,focus_ctx_prob=.08):
     xs=[]
     for _ in range(cfg["batch_size"]):
-        src=focus_pairs if focus_pairs and rng.random() < focus_prob else pairs
+        use_focus=bool(focus_pairs) and rng.random() < focus_prob
+        src=focus_pairs if use_focus else pairs
         pair=src[rng.randrange(len(src))]
-        xs.append(h.example(tok,cfg,*pair,rng.random() < ctx_prob))
+        this_ctx=focus_ctx_prob if use_focus else ctx_prob
+        xs.append(h.example(tok,cfg,*pair,rng.random() < this_ctx))
     T=max(len(x[0]) for x in xs)
     xb=torch.full((len(xs),T),tok.pad,dtype=torch.long)
     yb=torch.full((len(xs),T),-100,dtype=torch.long)
@@ -44,7 +46,7 @@ def eval_raw_loss(model,tok,cfg,pairs,device,seed,batches=16):
     rng=random.Random(seed)
     model.eval(); vals=[]
     for _ in range(batches):
-        x,y=make_batch(tok,cfg,pairs,device,rng,ctx_prob=0.0)
+        x,y=make_batch(tok,cfg,pairs,device,rng,ctx_prob=0.0,focus_pairs=None,focus_prob=0.0)
         _,loss=model(x,y)
         vals.append(float(loss))
     model.train()
@@ -93,8 +95,14 @@ def train(args):
         model=h.HGAIModel(len(tok.vocab),cfg).to(device)
         start=0; best=999.0; best_step=0; best_state=None
 
+    # Focus pool: curated facts + knowledge.json + explicit v10/user additions.
+    focus_seed=list(h.curated_pairs())
+    extra_path=Path(args.train_file).with_name("train_v10_extra.txt")
+    if extra_path.exists():
+        focus_seed += h.parse_pairs(extra_path.read_text(encoding="utf-8"))
     trset=set(tr)
-    core=[x for x in h.expand_pairs(h.curated_pairs(),max_variants=8) if x in trset]
+    core=[x for x in h.expand_pairs(focus_seed,max_variants=12) if x in trset]
+
     opt=torch.optim.AdamW(model.parameters(),lr=args.lr,betas=(.9,.95),weight_decay=.1)
     if ck and ck.get("optimizer"):
         try:
@@ -108,12 +116,13 @@ def train(args):
     eval_seed=args.seed+9173
     last_loss=None; last_val=999.0
     print(f"HGAI quality trainer preset={args.preset} params={h.count_params(model):,} pairs={len(pairs):,} core={len(core):,} start={start} device={device}")
+    print("curriculum: core focus 0.58 -> 0.45 -> 0.32; context general=0.22 core=0.08; validation context=0")
 
     for local in range(args.steps):
         step=start+local
         progress=(step+1)/max(1,total)
-        focus_prob=.45 if progress < .45 else (.32 if progress < .80 else .22)
-        x,y=make_batch(tok,cfg,tr,device,rng,ctx_prob=.30,focus_pairs=core,focus_prob=focus_prob)
+        focus_prob=.58 if progress < .45 else (.45 if progress < .80 else .32)
+        x,y=make_batch(tok,cfg,tr,device,rng,ctx_prob=.22,focus_pairs=core,focus_prob=focus_prob,focus_ctx_prob=.08)
         _,loss=model(x,y); last_loss=float(loss.detach())
         opt.zero_grad(set_to_none=True); loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(),1.0)
@@ -134,12 +143,15 @@ def train(args):
                 "resume_model":resume_state,"optimizer":opt.state_dict(),"rng_state":rng.getstate(),
                 "step":step+1,"best_step":best_step,"best_val":best,"last_val":last_val,
                 "params":h.count_params(model),"dataset_hash":data_hash,"artifact_ready":False,
-                "trainer":"quality-v1"
+                "semantic_ready":False,"raw_neural_gate":False,"hybrid_gate":False,
+                "trainer":"quality-v1","trainer_revision":2,"focus_core_pairs":len(core),
+                "focus_schedule":[0.58,0.45,0.32],"context_prob_general":0.22,"context_prob_core":0.08
             },args.model_file)
 
     result={"step":start+args.steps,"best_step":best_step,"best_val":best,"last_val":last_val,
             "last_loss":last_loss,"params":h.count_params(model),"pairs":len(pairs),"core_pairs":len(core),
-            "dataset_hash":data_hash,"trainer":"quality-v1"}
+            "dataset_hash":data_hash,"trainer":"quality-v1","trainer_revision":2,"focus_schedule":[.58,.45,.32],
+            "context_prob_general":.22,"context_prob_core":.08}
     print(json.dumps(result,ensure_ascii=False,indent=2))
 
 
