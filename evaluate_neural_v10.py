@@ -42,9 +42,10 @@ def main():
     passed=0
     rows=[]
     for i,(q,groups) in enumerate(TESTS,1):
+        # Each raw-neural question is independent. Previous answers must not leak through history.
+        e.history=[]
         torch.manual_seed(args.seed+i)
         if torch.cuda.is_available(): torch.cuda.manual_seed_all(args.seed+i)
-        # raw-neural is intentionally required here: retrieval/curated facts must not answer.
         a=e.reply(q, mode="raw-neural", temperature=.58, top_k=20, top_p=.88, max_new_tokens=80)
         good=semantic_pass(a,groups)
         passed+=good
@@ -54,6 +55,7 @@ def main():
         "preset":args.preset,
         "model_file":args.model_file,
         "seed":args.seed,
+        "history_isolated":True,
         "passed":passed,
         "total":len(TESTS),
         "required":args.min_pass,
