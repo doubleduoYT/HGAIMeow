@@ -5,6 +5,7 @@ import ast,difflib,hashlib,math,random,re
 from collections import Counter,defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 from build_dataset import CURATED_FACTS,curated_pairs,expand_pairs,is_obsolete_pair,parse_pairs
 
 BASE_DIR=Path(__file__).resolve().parent
@@ -66,7 +67,7 @@ class Retriever:
   scored=[]
   for i in cand:
    seq=difflib.SequenceMatcher(None,nq,self.n[i]).ratio(); qt,qg=self.t[i],self.g[i]
-   tj=len(tq&qt)/max(1,len(tq|qt)); gj=len(gq&qg)/max(1,len(gq|gq)); cont=1.0 if (nq in self.n[i] or self.n[i] in nq) and min(len(nq),len(self.n[i]))>=3 else 0
+   tj=len(tq&qt)/max(1,len(tq|qt)); gj=len(gq&qg)/max(1,len(gq|qg)); cont=1.0 if (nq in self.n[i] or self.n[i] in nq) and min(len(nq),len(self.n[i]))>=3 else 0
    s=min(1,seq*.48+gj*.27+tj*.20+cont*.12)
    if s>=.34: scored.append(Hit(s,*self.pairs[i]))
   scored.sort(key=lambda h:h.score,reverse=True); out=[]; seen=set()
