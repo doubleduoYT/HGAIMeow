@@ -1,85 +1,212 @@
-name: Train HGAI v8
+name: Train HGAI v10 Practical
 
 on:
   workflow_dispatch:
     inputs:
       preset:
-        description: "model preset"
+        description: "HGAI model preset"
         required: true
-        default: "mid-safe"
+        default: "main"
         type: choice
         options:
-          - tiny
-          - phone
-          - mid-safe
-          - mid-plus
-          - pc
+          - main
+          - large
       steps:
-        description: "training steps"
+        description: "initial training steps"
         required: true
-        default: "6000"
-      generation_mode:
-        description: "benchmark generation mode"
+        default: "2500"
+      extra_steps:
+        description: "extra steps when validation gate is not met"
         required: true
-        default: "safe"
-        type: choice
-        options:
-          - safe
-          - creative
-          - off
+        default: "1500"
+      neural_extra_steps:
+        description: "extra steps when raw-neural semantic gate is not met"
+        required: true
+        default: "2000"
   push:
     branches: [ main, master ]
     paths:
+      - "hgai_core.py"
       - "run_hgai.py"
+      - "build_dataset.py"
       - "train.txt"
+      - "train_v10_extra.txt"
       - "knowledge.json"
       - "personality.json"
-      - "eval_tests.json"
+      - "eval_v10.json"
+      - "evaluate_v10.py"
+      - "evaluate_neural_v10.py"
+      - "teacher_reference.py"
+      - "README.md"
+      - ".github/workflows/train.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "hgai_core.py"
+      - "run_hgai.py"
+      - "build_dataset.py"
+      - "train.txt"
+      - "train_v10_extra.txt"
+      - "knowledge.json"
+      - "eval_v10.json"
+      - "evaluate_v10.py"
+      - "evaluate_neural_v10.py"
       - ".github/workflows/train.yml"
 
 jobs:
-  train:
+  pr-smoke:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    env:
-      PRESET: ${{ github.event.inputs.preset || 'mid-safe' }}
-      STEPS: ${{ github.event.inputs.steps || '6000' }}
-      GENMODE: ${{ github.event.inputs.generation_mode || 'safe' }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install torch
-
-      - name: Validate dataset
+      - name: Compile and deterministic dataset check
         run: |
-          python validate_dataset.py
-          python run_hgai.py --validate --lite
-
-      - name: Train model
+          python -m py_compile hgai_core.py run_hgai.py build_dataset.py evaluate_v10.py evaluate_neural_v10.py teacher_reference.py
+          python build_dataset.py --max-variants 12
+          cp augmented_train.txt /tmp/augmented_train.first.txt
+          cp DATASET_REPORT_V10.json /tmp/report.first.json
+          python build_dataset.py --max-variants 12
+          cmp augmented_train.txt /tmp/augmented_train.first.txt
+          cmp DATASET_REPORT_V10.json /tmp/report.first.json
+          cat DATASET_REPORT_V10.json
+      - name: Search and diversity regression
         run: |
-          python run_hgai.py --retrain --preset "$PRESET" --steps "$STEPS" --threads 2
-
-      - name: Info and benchmark
+          python evaluate_v10.py --mode search --model-file does-not-exist.pth
+      - name: Two-step neural training smoke
         run: |
-          python run_hgai.py --info --preset "$PRESET"
-          python run_hgai.py --benchmark --preset "$PRESET" --generation-mode "$GENMODE"
-          python run_hgai.py --eval --preset "$PRESET" --generation-mode safe
+          python run_hgai.py --retrain --preset main --steps 2 --threads 2 --seed 20260822 --model-file /tmp/hgai_smoke.pth
+          python - <<'PY'
+          from hgai_core import checkpoint_load
+          c=checkpoint_load('/tmp/hgai_smoke.pth') or {}
+          assert c.get('version') == 'hgai-v10'
+          assert c.get('preset') == 'main'
+          assert int(c.get('step',0)) == 2
+          assert int(c.get('best_step',0)) in (1,2)
+          assert c.get('dataset_hash')
+          print('checkpoint smoke PASS', {k:c.get(k) for k in ['step','best_step','best_val','last_val','params','dataset_hash']})
+          PY
+      - name: Ensure raw-neural really bypasses retrieval
+        run: |
+          set +e
+          python evaluate_neural_v10.py --model-file /tmp/hgai_smoke.pth --preset main --min-pass 7
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ]; then
+            echo "A two-step random model unexpectedly passed raw-neural semantics; the test may be leaking retrieval."
+            exit 1
+          fi
+          echo "raw-neural isolation PASS (untrained model correctly failed semantic gate)"
 
+  train:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      PRESET: ${{ github.event.inputs.preset || 'main' }}
+      STEPS: ${{ github.event.inputs.steps || '2500' }}
+      EXTRA_STEPS: ${{ github.event.inputs.extra_steps || '1500' }}
+      NEURAL_EXTRA_STEPS: ${{ github.event.inputs.neural_extra_steps || '2000' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch
+      - name: Compile and validate source
+        run: |
+          python -m py_compile hgai_core.py run_hgai.py build_dataset.py evaluate_v10.py evaluate_neural_v10.py teacher_reference.py
+          python build_dataset.py --max-variants 12
+          cat DATASET_REPORT_V10.json
+          python evaluate_v10.py --mode search --model-file does-not-exist.pth
+      - name: Train standalone HGAI model
+        run: |
+          python run_hgai.py --retrain --preset "$PRESET" --steps "$STEPS" --threads 2 --model-file hgai_model_v10.pth
+      - name: Continue training when validation gate needs it
+        shell: bash
+        run: |
+          set +e
+          python - <<'PY'
+          import sys
+          from hgai_core import checkpoint_load
+          c=checkpoint_load('hgai_model_v10.pth') or {}
+          step=int(c.get('step',0)); best=float(c.get('best_val',999)); best_step=int(c.get('best_step',0))
+          print(f'checkpoint after initial train: step={step} best_val={best:.4f} best_step={best_step}')
+          sys.exit(0 if step >= 1500 and best <= 2.8 else 42)
+          PY
+          ready=$?
+          set -e
+          if [ "$ready" -ne 0 ]; then
+            echo "Validation gate not met; resuming for ${EXTRA_STEPS} steps"
+            python run_hgai.py --resume --preset "$PRESET" --steps "$EXTRA_STEPS" --threads 2 --model-file hgai_model_v10.pth
+          fi
+      - name: Raw-neural semantic gate with one recovery round
+        shell: bash
+        run: |
+          set +e
+          python evaluate_neural_v10.py --model-file hgai_model_v10.pth --preset "$PRESET" --min-pass 7
+          neural=$?
+          set -e
+          if [ "$neural" -ne 0 ]; then
+            echo "Raw-neural gate not met; resuming for ${NEURAL_EXTRA_STEPS} steps"
+            python run_hgai.py --resume --preset "$PRESET" --steps "$NEURAL_EXTRA_STEPS" --threads 2 --model-file hgai_model_v10.pth
+          fi
+      - name: Final validation and raw-neural gates
+        run: |
+          python - <<'PY'
+          import json
+          from hgai_core import checkpoint_load
+          c=checkpoint_load('hgai_model_v10.pth') or {}
+          report={
+            'version':c.get('version'),
+            'preset':c.get('preset'),
+            'step':int(c.get('step',0)),
+            'best_step':int(c.get('best_step',0)),
+            'best_val':float(c.get('best_val',999)),
+            'last_val':float(c.get('last_val',999)),
+            'params':int(c.get('params',0)),
+            'dataset_hash':c.get('dataset_hash'),
+          }
+          report['validation_ready']=report['step'] >= 1500 and report['best_val'] <= 2.8
+          print(json.dumps(report,ensure_ascii=False,indent=2))
+          if not report['validation_ready']:
+            raise SystemExit('checkpoint did not reach validation quality gate')
+          open('MODEL_STATUS_RUNTIME.json','w',encoding='utf-8').write(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+          PY
+          python evaluate_neural_v10.py --model-file hgai_model_v10.pth --preset "$PRESET" --min-pass 7
+      - name: Practical hybrid regression
+        run: |
+          python run_hgai.py --info --preset "$PRESET" --model-file hgai_model_v10.pth
+          python evaluate_v10.py --mode hybrid --preset "$PRESET" --model-file hgai_model_v10.pth
+      - name: Mark model artifact ready
+        run: |
+          python - <<'PY'
+          import json
+          p='MODEL_STATUS_RUNTIME.json'
+          d=json.load(open(p,encoding='utf-8'))
+          d['raw_neural_semantic_gate']='passed_7_of_10_or_better'
+          d['hybrid_regression']='passed'
+          d['artifact_ready']=True
+          open(p,'w',encoding='utf-8').write(json.dumps(d,ensure_ascii=False,indent=2)+'\n')
+          PY
       - name: Prepare artifact
         run: |
           mkdir -p dist
-          cp run_hgai.py train.txt knowledge.json personality.json eval_tests.json validate_dataset.py requirements.txt README.md TERMUX_TORCH_GUIDE.txt DATASET_REPORT.json hgai_model.pth dist/
+          cp hgai_core.py run_hgai.py build_dataset.py teacher_reference.py train.txt train_v10_extra.txt augmented_train.txt knowledge.json personality.json eval_v10.json evaluate_v10.py evaluate_neural_v10.py requirements.txt README.md DATASET_REPORT_V10.json MODEL_STATUS_RUNTIME.json hgai_model_v10.pth dist/
           ls -lah dist
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: hgai-v8-model-${{ env.PRESET }}
+          name: hgai-v10-${{ env.PRESET }}
           path: dist/*
           if-no-files-found: error
