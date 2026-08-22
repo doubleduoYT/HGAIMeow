@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """HGAI v10 dataset builder.
 
-The final runtime is independent of external LLMs.  This module expands the
+The final runtime is independent of external LLMs. This module expands the
 hand-written HGAI data with conservative paraphrases and a curated factual
-core.  Optional teacher-model suggestions are kept separate and are never
+core. Optional teacher-model suggestions are kept separate and are never
 required by HGAI at runtime.
 """
 from __future__ import annotations
@@ -127,11 +127,7 @@ QUESTION_PATTERNS = [
     "{term} 설명해줘", "{term} 쉽게 설명해줘", "{term} 뜻이 뭐야?", "{term} 알려줘",
 ]
 SPECIAL_QUESTIONS = {
-    "Casualties: Unknown": [
-        "Casualties: Unknown 게임이 뭐야?", "Casualties: Unknown이 뭐야?",
-        "Casualties Unknown 게임 설명해줘", "캐주얼티즈 언노운이 뭐야?",
-        "Casualties: Unknown 설명해줘", "Casualties Unknown은 어떤 게임이야?",
-    ],
+    "Casualties: Unknown": ["Casualties: Unknown 게임이 뭐야?", "Casualties: Unknown이 뭐야?", "Casualties Unknown 게임 설명해줘", "캐주얼티즈 언노운이 뭐야?", "Casualties: Unknown 설명해줘", "Casualties Unknown은 어떤 게임이야?"],
     "TCP와 UDP 차이": ["TCP랑 UDP는 뭐가 달라?", "TCP와 UDP 차이 알려줘", "TCP UDP 차이가 뭐야?", "TCP랑 UDP 비교해줘"],
 }
 GENERIC_REWRITES = [
@@ -148,126 +144,107 @@ def parse_pairs(text: str):
     out=[]
     for raw in text.splitlines():
         line=raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        q,a=line.split("=",1)
-        q,a=clean(q),clean(a)
-        if q and a:
-            out.append((q,a))
+        if not line or line.startswith("#") or "=" not in line: continue
+        q,a=line.split("=",1); q,a=clean(q),clean(a)
+        if q and a: out.append((q,a))
     return out
 
 def knowledge_pairs(path=BASE_DIR / "knowledge.json"):
     out=[]
+    try: data=json.loads(Path(path).read_text(encoding="utf-8"))
+    except Exception: return out
+    for term,answer in (data.get("concepts") or {}).items():
+        if isinstance(term,str) and isinstance(answer,str) and term.strip() and answer.strip():
+            out.append((f"{term}이 뭐야?",clean(answer))); out.append((f"{term} 설명해줘",clean(answer)))
+    for q,a in (data.get("required_answers") or {}).items():
+        if isinstance(q,str) and isinstance(a,str) and q.strip() and a.strip(): out.append((clean(q),clean(a)))
+    random_prompts={"animals":["동물 이름 아무거나 말해봐","동물 하나 말해봐"],"games":["게임 아무거나 말해봐","게임 하나 추천해줘"],"foods":["음식 아무거나 말해봐","먹을 거 하나 말해봐"],"colors":["색깔 아무거나 말해봐","색 하나 말해봐"],"words":["단어 아무거나 말해봐","단어 하나 말해봐"],"people":["사람 이름 아무거나 말해봐","이름 하나 말해봐"],"abbreviations":["IT 약어 아무거나 말해봐","약어 하나 말해봐"]}
+    for group,prompts in random_prompts.items():
+        for item in (data.get("random") or {}).get(group,[]):
+            if not isinstance(item,str) or not item.strip(): continue
+            answer=clean(item)+"다냥"
+            for q in prompts: out.append((q,answer))
+    return out
+
+def trusted_fact_map(path=BASE_DIR / "knowledge.json"):
+    facts={}
     try:
         data=json.loads(Path(path).read_text(encoding="utf-8"))
-    except Exception:
-        return out
-    for term, answer in (data.get("concepts") or {}).items():
-        if isinstance(term,str) and isinstance(answer,str) and term.strip() and answer.strip():
-            out.append((f"{term}이 뭐야?", clean(answer)))
-            out.append((f"{term} 설명해줘", clean(answer)))
-    for q, a in (data.get("required_answers") or {}).items():
-        if isinstance(q,str) and isinstance(a,str) and q.strip() and a.strip():
-            out.append((clean(q), clean(a)))
-    random_prompts={
-        "animals":["동물 이름 아무거나 말해봐","동물 하나 말해봐"],
-        "games":["게임 아무거나 말해봐","게임 하나 추천해줘"],
-        "foods":["음식 아무거나 말해봐","먹을 거 하나 말해봐"],
-        "colors":["색깔 아무거나 말해봐","색 하나 말해봐"],
-        "words":["단어 아무거나 말해봐","단어 하나 말해봐"],
-        "people":["사람 이름 아무거나 말해봐","이름 하나 말해봐"],
-        "abbreviations":["IT 약어 아무거나 말해봐","약어 하나 말해봐"],
-    }
-    for group, prompts in random_prompts.items():
-        for item in (data.get("random") or {}).get(group, []):
-            if not isinstance(item,str) or not item.strip():
-                continue
-            answer=clean(item)+"다냥"
-            for q in prompts:
-                out.append((q,answer))
-    return out
+        for term,answer in (data.get("concepts") or {}).items():
+            if isinstance(term,str) and isinstance(answer,str) and term.strip() and answer.strip(): facts[clean(term)]=clean(answer)
+    except Exception: pass
+    facts.update({clean(k):clean(v) for k,v in CURATED_FACTS.items()})
+    return facts
+
+_DEFINITION_INTENT=("뭐","설명","알려","뜻","무엇","어떤","뭔데","뭐임","쉽게","정의")
+
+def _term_in_question(question: str, term: str) -> bool:
+    low=question.lower(); t=term.lower()
+    if re.fullmatch(r"[A-Za-z0-9+.#:_ -]+",term):
+        return re.search(r"(?<![A-Za-z0-9])"+re.escape(t)+r"(?![A-Za-z0-9])",low) is not None
+    return t in low
+
+def trusted_answer_for_question(question: str, facts=None):
+    q=clean(question)
+    if not any(x in q for x in _DEFINITION_INTENT): return None
+    low=q.lower()
+    if "tcp" in low and "udp" in low and any(x in q for x in ("차이","달라","다름","비교")):
+        return clean(CURATED_FACTS["TCP와 UDP 차이"])
+    facts=facts or trusted_fact_map()
+    matches=[term for term in facts if _term_in_question(q,term)]
+    matches=[term for term in matches if not any(term!=other and len(other)>len(term) and term.lower() in other.lower() for other in matches)]
+    return clean(facts[matches[0]]) if len(matches)==1 else None
 
 def curated_pairs():
     out=[]
-    for term, answer in CURATED_FACTS.items():
-        qs = list(SPECIAL_QUESTIONS.get(term, [])) + [p.format(term=term) for p in QUESTION_PATTERNS]
-        for q in qs:
-            out.append((clean(q), clean(answer)))
-    out.extend(knowledge_pairs())
-    dedup=[]; seen=set()
+    for term,answer in CURATED_FACTS.items():
+        qs=list(SPECIAL_QUESTIONS.get(term,[]))+[p.format(term=term) for p in QUESTION_PATTERNS]
+        for q in qs: out.append((clean(q),clean(answer)))
+    out.extend(knowledge_pairs()); dedup=[]; seen=set()
     for q,a in out:
-        k=(clean(q), clean(a))
-        if k not in seen:
-            seen.add(k); dedup.append(k)
+        k=(clean(q),clean(a))
+        if k not in seen: seen.add(k); dedup.append(k)
     return dedup
 
 def paraphrase_question(q: str):
-    q=clean(q)
-    variants={q, q.rstrip("?!.")}
-    variants.add(q.replace("알려 줘", "알려줘").replace("설명 해줘", "설명해줘"))
-    bare=q.rstrip("?!.")
-    if 2 <= len(bare) <= 120:
-        variants.update({
-            f"궁금한데 {q}", f"하나 물어볼게 {q}", f"질문 하나 할게 {q}", f"혹시 {q}",
-            f"{bare} 좀 알려줘", f"{bare}에 대해 답해줘",
-        })
-    for rx, templates in GENERIC_REWRITES:
+    q=clean(q); variants={q,q.rstrip("?!.")}; variants.add(q.replace("알려 줘","알려줘").replace("설명 해줘","설명해줘")); bare=q.rstrip("?!.")
+    if 2<=len(bare)<=120:
+        variants.update({f"궁금한데 {q}",f"하나 물어볼게 {q}",f"질문 하나 할게 {q}",f"혹시 {q}",f"{bare} 좀 알려줘",f"{bare}에 대해 답해줘"})
+    for rx,templates in GENERIC_REWRITES:
         m=rx.fullmatch(q)
         if m:
             x=clean(m.group(1))
-            if 1 < len(x) <= 80:
-                variants.update(t.format(x=x) for t in templates)
-    if q.endswith("?"):
-        variants.add(q[:-1])
-    if "뭐야" in q:
-        variants.add(q.replace("뭐야", "뭐임")); variants.add(q.replace("뭐야", "무엇이야"))
-    if "알려줘" in q:
-        variants.add(q.replace("알려줘", "알려 줄래?"))
+            if 1<len(x)<=80: variants.update(t.format(x=x) for t in templates)
+    if q.endswith("?"): variants.add(q[:-1])
+    if "뭐야" in q: variants.add(q.replace("뭐야","뭐임")); variants.add(q.replace("뭐야","무엇이야"))
+    if "알려줘" in q: variants.add(q.replace("알려줘","알려 줄래?"))
     return sorted({clean(v) for v in variants if clean(v)})
 
-def is_obsolete_pair(q: str, a: str) -> bool:
+def is_obsolete_pair(q: str,a: str) -> bool:
     text=(clean(q)+" "+clean(a)).lower()
     return "phone preset" in text or ("phone은 폰용" in text and "mid-safe" in text)
 
-def expand_pairs(base_pairs, max_variants=8):
-    source=[(q,a) for q,a in base_pairs if not is_obsolete_pair(q,a)]+curated_pairs()
-    out=[]; seen=set()
+def expand_pairs(base_pairs,max_variants=8,return_stats=False):
+    source=[(q,a) for q,a in base_pairs if not is_obsolete_pair(q,a)]+curated_pairs(); facts=trusted_fact_map(); out=[]; seen=set(); rewrites=0
     for q,a in source:
+        canonical=trusted_answer_for_question(q,facts)
+        if canonical and canonical!=a: a=canonical; rewrites+=1
         for v in paraphrase_question(q)[:max_variants]:
             key=(v,a)
-            if key not in seen:
-                seen.add(key); out.append(key)
+            if key not in seen: seen.add(key); out.append(key)
+    if return_stats: return out,{"trusted_answer_rewrites":rewrites,"trusted_fact_terms":len(facts)}
     return out
 
 def dataset_hash(pairs):
-    blob="\n".join(f"{q}={a}" for q,a in pairs).encode("utf-8")
-    return hashlib.sha256(blob).hexdigest()
+    return hashlib.sha256("\n".join(f"{q}={a}" for q,a in pairs).encode("utf-8")).hexdigest()
 
 def main():
-    ap=argparse.ArgumentParser()
-    ap.add_argument("--train", default=str(BASE_DIR/"train.txt"))
-    ap.add_argument("--output", default=str(BASE_DIR/"augmented_train.txt"))
-    ap.add_argument("--report", default=str(BASE_DIR/"DATASET_REPORT_V10.json"))
-    ap.add_argument("--max-variants", type=int, default=8)
-    args=ap.parse_args()
-    train_path=Path(args.train)
-    base=parse_pairs(train_path.read_text(encoding="utf-8"))
-    extra_path=train_path.with_name("train_v10_extra.txt")
-    if extra_path.exists():
-        base += parse_pairs(extra_path.read_text(encoding="utf-8"))
-    pairs=expand_pairs(base,args.max_variants)
+    ap=argparse.ArgumentParser(); ap.add_argument("--train",default=str(BASE_DIR/"train.txt")); ap.add_argument("--output",default=str(BASE_DIR/"augmented_train.txt")); ap.add_argument("--report",default=str(BASE_DIR/"DATASET_REPORT_V10.json")); ap.add_argument("--max-variants",type=int,default=8); args=ap.parse_args()
+    train_path=Path(args.train); base=parse_pairs(train_path.read_text(encoding="utf-8")); extra_path=train_path.with_name("train_v10_extra.txt")
+    if extra_path.exists(): base+=parse_pairs(extra_path.read_text(encoding="utf-8"))
+    pairs,clean_stats=expand_pairs(base,args.max_variants,return_stats=True)
     Path(args.output).write_text("\n".join(f"{q}={a}" for q,a in pairs)+"\n",encoding="utf-8")
-    report={
-        "version":"v10",
-        "base_pairs":len(base),
-        "curated_topics":len(CURATED_FACTS),
-        "effective_pairs":len(pairs),
-        "unique_questions":len({q for q,_ in pairs}),
-        "sha256":dataset_hash(pairs),
-        "external_model_required_at_runtime":False,
-    }
-    Path(args.report).write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
-    print(json.dumps(report,ensure_ascii=False,indent=2))
+    report={"version":"v10","base_pairs":len(base),"curated_topics":len(CURATED_FACTS),"effective_pairs":len(pairs),"unique_questions":len({q for q,_ in pairs}),"trusted_answer_rewrites":clean_stats["trusted_answer_rewrites"],"trusted_fact_terms":clean_stats["trusted_fact_terms"],"sha256":dataset_hash(pairs),"external_model_required_at_runtime":False}
+    Path(args.report).write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8"); print(json.dumps(report,ensure_ascii=False,indent=2))
 
-if __name__ == "__main__":
-    main()
+if __name__=="__main__": main()
