@@ -147,7 +147,7 @@ jobs:
           import json
           s=json.load(open('MODEL_STATUS_PREVIEW.json',encoding='utf-8'))
           n=json.load(open('NEURAL_EVAL_RUNTIME.json',encoding='utf-8'))
-          print('# HGAI v10 Preview')
+          print('# HGAI v10.1 Bilingual Preview')
           print()
           print('Standalone HGAI preview checkpoint. No external language model is required at runtime.')
           print()
@@ -169,6 +169,8 @@ jobs:
             HGAIMeow-v10-preview.zip \
             MODEL_STATUS_PREVIEW.json \
             NEURAL_EVAL_RUNTIME.json \
+            EN_EVAL_RUNTIME.json \
+            EN_NEURAL_EVAL_RUNTIME.json \
             DATASET_REPORT_V10.json \
             SHA256SUMS.txt \
             --repo "${{ github.repository }}" \
