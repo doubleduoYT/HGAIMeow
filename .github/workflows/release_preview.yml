@@ -58,9 +58,18 @@ jobs:
           python -m py_compile hgai_core.py run_hgai.py build_dataset.py train_v10_quality.py evaluate_v10.py evaluate_neural_v10.py evaluate_bilingual_v10.py
           python build_dataset.py --max-variants 12
           cat DATASET_REPORT_V10.json
-      - name: Train 2500 steps
+      - name: Fetch previous v10 checkpoint
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          python train_v10_quality.py --preset main --steps 2500 --threads 2 --seed 20260822 --model-file hgai_model_v10.pth
+          gh release download v10.0.0-preview.3 --repo "${{ github.repository }}" --pattern hgai_model_v10_preview.pth --dir .
+      - name: Evaluate baseline neural model
+        run: |
+          python evaluate_neural_v10.py --model-file hgai_model_v10_preview.pth --min-pass 0 --report BASELINE_KO_NEURAL.json
+          python evaluate_bilingual_v10.py --mode raw-neural --model-file hgai_model_v10_preview.pth --min-pass 0 --report BASELINE_EN_NEURAL.json
+      - name: Warm-start bilingual training (2500 steps)
+        run: |
+          python train_v10_quality.py --preset main --steps 2500 --threads 2 --seed 20260822 --model-file hgai_model_v10.pth --init-model-file hgai_model_v10_preview.pth
       - name: Continue 3500 steps
         run: |
           python train_v10_quality.py --resume --preset main --steps 3500 --threads 2 --seed 20260822 --model-file hgai_model_v10.pth
@@ -117,7 +126,7 @@ jobs:
       - name: Package preview
         run: |
           mkdir -p HGAIMeow-v10-preview
-          cp hgai_model_v10_preview.pth MODEL_STATUS_PREVIEW.json NEURAL_EVAL_RUNTIME.json EN_EVAL_RUNTIME.json EN_NEURAL_EVAL_RUNTIME.json DATASET_REPORT_V10.json HGAIMeow-v10-preview/
+          cp hgai_model_v10_preview.pth MODEL_STATUS_PREVIEW.json NEURAL_EVAL_RUNTIME.json EN_EVAL_RUNTIME.json EN_NEURAL_EVAL_RUNTIME.json BASELINE_KO_NEURAL.json BASELINE_EN_NEURAL.json DATASET_REPORT_V10.json HGAIMeow-v10-preview/
           cp hgai_core.py run_hgai.py build_dataset.py train_v10_quality.py evaluate_v10.py evaluate_neural_v10.py evaluate_bilingual_v10.py teacher_reference.py HGAIMeow-v10-preview/
           cp train.txt train_v10_extra.txt train_en.txt knowledge.json personality.json eval_v10.json requirements.txt README.md HGAIMeow-v10-preview/
           zip -r -9 HGAIMeow-v10-preview.zip HGAIMeow-v10-preview
@@ -135,6 +144,8 @@ jobs:
             NEURAL_EVAL_RUNTIME.json
             EN_EVAL_RUNTIME.json
             EN_NEURAL_EVAL_RUNTIME.json
+            BASELINE_KO_NEURAL.json
+            BASELINE_EN_NEURAL.json
             DATASET_REPORT_V10.json
             SHA256SUMS.txt
           if-no-files-found: error
@@ -157,6 +168,10 @@ jobs:
           print(f"- Raw-neural semantic test: {n.get('passed',0)}/{n.get('total',0)} (required 7/10)")
           e=json.load(open('EN_EVAL_RUNTIME.json',encoding='utf-8'))
           en=json.load(open('EN_NEURAL_EVAL_RUNTIME.json',encoding='utf-8'))
+          bko=json.load(open('BASELINE_KO_NEURAL.json',encoding='utf-8'))
+          ben=json.load(open('BASELINE_EN_NEURAL.json',encoding='utf-8'))
+          print(f"- Baseline Korean raw-neural: {bko['passed']}/{bko['total']}")
+          print(f"- Baseline English raw-neural: {ben['passed']}/{ben['total']}")
           print('- Hybrid regression: 30/30')
           print(f"- English hybrid test: {e['passed']}/{e['total']}")
           print(f"- English raw-neural test: {en['passed']}/{en['total']}")
@@ -171,6 +186,8 @@ jobs:
             NEURAL_EVAL_RUNTIME.json \
             EN_EVAL_RUNTIME.json \
             EN_NEURAL_EVAL_RUNTIME.json \
+            BASELINE_KO_NEURAL.json \
+            BASELINE_EN_NEURAL.json \
             DATASET_REPORT_V10.json \
             SHA256SUMS.txt \
             --repo "${{ github.repository }}" \
