@@ -10,6 +10,9 @@ from build_dataset import CURATED_FACTS,curated_pairs,expand_pairs,is_obsolete_p
 
 BASE_DIR=Path(__file__).resolve().parent
 SYSTEM_TEXT="너는 HGAI다냥. 한국어로 정확하고 자연스럽게 답하고 말끝에 냥을 자연스럽게 붙인다냥. 모르는 사실은 지어내지 않는다냥."
+SYSTEM_TEXT_EN="You are HGAI. Answer clearly in English, stay factual, and use a light cat-like meow."
+def system_text_for_question(q):
+ return SYSTEM_TEXT_EN if re.search(r"[A-Za-z]",q) and not re.search(r"[가-힣]",q) else SYSTEM_TEXT
 FALLBACK_RESPONSE="잘 모르겠다냥 새로 배우고 싶다냥 :3"
 SPECIAL=["<pad>","<unk>","<|system|>","<|user|>","<|context|>","<|assistant|>","<|end|>"]
 PRESETS={
@@ -42,6 +45,8 @@ def grams(x,n=3):
 def load_pairs(train_file):
  base=parse_pairs(Path(train_file).read_text(encoding="utf-8")); ef=Path(train_file).with_name("train_v10_extra.txt")
  if ef.exists(): base+=parse_pairs(ef.read_text(encoding="utf-8"))
+ en=Path(train_file).with_name("train_en.txt")
+ if en.exists(): base+=parse_pairs(en.read_text(encoding="utf-8"))
  merged=[(q,a) for q,a in base if not is_obsolete_pair(q,a)]+curated_pairs(); out=[]; seen=set()
  for q,a in merged:
   k=(clean_text(q),fix_nyang(a))
@@ -175,13 +180,15 @@ def checkpoint_load(path):
 def training_pairs(train_file,max_variants=12):
  base=parse_pairs(Path(train_file).read_text(encoding="utf-8"));ef=Path(train_file).with_name("train_v10_extra.txt")
  if ef.exists():base+=parse_pairs(ef.read_text(encoding="utf-8"))
+ en=Path(train_file).with_name("train_en.txt")
+ if en.exists():base+=parse_pairs(en.read_text(encoding="utf-8"))
  return expand_pairs(base,max_variants=max_variants)
 def split_pairs(pairs,pct=2):
  tr=[];va=[]
  for x in pairs:(va if int(hashlib.md5(x[0].encode()).hexdigest()[:8],16)%100<pct else tr).append(x)
  return tr,va
 def example(tok,cfg,q,a,ctx=False):
- p=f"<|system|> {SYSTEM_TEXT}<|end|>\n<|user|> {q}\n"+(f"<|context|> {a}<|end|>\n" if ctx else "")+"<|assistant|> ";t=f"{a}<|end|>";pi,ti=tok.encode(p),tok.encode(t);ids=pi+ti;labels=[-100]*len(pi)+ti;ex=max(0,len(ids)-cfg["block_size"]);return ids[ex:],labels[ex:]
+ p=f"<|system|> {system_text_for_question(q)}<|end|>\n<|user|> {q}\n"+(f"<|context|> {a}<|end|>\n" if ctx else "")+"<|assistant|> ";t=f"{a}<|end|>";pi,ti=tok.encode(p),tok.encode(t);ids=pi+ti;labels=[-100]*len(pi)+ti;ex=max(0,len(ids)-cfg["block_size"]);return ids[ex:],labels[ex:]
 def batch(tok,cfg,pairs,device,rng):
  xs=[example(tok,cfg,*pairs[rng.randrange(len(pairs))],rng.random()<.35) for _ in range(cfg["batch_size"])];T=max(len(x[0]) for x in xs);xb=torch.full((len(xs),T),tok.pad,dtype=torch.long);yb=torch.full((len(xs),T),-100,dtype=torch.long)
  for i,(a,b) in enumerate(xs):xb[i,:len(a)]=torch.tensor(a);yb[i,:len(b)]=torch.tensor(b)
@@ -215,7 +222,7 @@ def train_model(train_file,model_file,preset="main",steps=3000,lr=3e-4,seed=1337
 @torch.no_grad() if TORCH_AVAILABLE else (lambda f:f)
 def neural_generate(model,tok,device,cfg,user,context=None,history=None,temperature=.72,top_k=40,top_p=.92,max_new_tokens=96,repetition_penalty=1.12,seed=None):
  if model is None:return None
- prompt=f"<|system|> {SYSTEM_TEXT}<|end|>\n"+"".join(f"<|user|> {u}\n<|assistant|> {a}<|end|>\n" for u,a in (history or [])[-2:])+f"<|user|> {user}\n"+(f"<|context|> {context}<|end|>\n" if context else "")+"<|assistant|> ";idx=torch.tensor([tok.encode(prompt)[-cfg["block_size"]:]],device=device);gen=[];rg=None
+ prompt=f"<|system|> {system_text_for_question(user)}<|end|>\n"+"".join(f"<|user|> {u}\n<|assistant|> {a}<|end|>\n" for u,a in (history or [])[-2:])+f"<|user|> {user}\n"+(f"<|context|> {context}<|end|>\n" if context else "")+"<|assistant|> ";idx=torch.tensor([tok.encode(prompt)[-cfg["block_size"]:]],device=device);gen=[];rg=None
  if seed is not None:rg=torch.Generator(device=device);rg.manual_seed(int(seed))
  for _ in range(max_new_tokens):
   z=model(idx[:,-cfg["block_size"]:])[0][:,-1].float()
