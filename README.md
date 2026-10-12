@@ -101,3 +101,31 @@ python teacher_reference.py --model Qwen/Qwen3-0.6B --prompts prompts.txt --outp
 ```
 
 이 파일은 `reviewed:false`인 검토 큐다. HGAI가 이 모델을 실행 엔진으로 사용하지 않고 생성된 제안도 자동으로 학습 데이터에 섞지 않는다. 사람이 확인한 데이터만 별도로 옮겨야 한다.
+
+
+## v10.1 bilingual training
+
+- `train_en.txt`: 123 hand-written English question/answer examples.
+- `build_dataset.py`: independently augments English questions without mixing Korean question prefixes.
+- `hgai_core.py`: English questions use an English system instruction in neural training and inference.
+- `train_v10_quality.py`: includes English pairs in the core curriculum.
+- `evaluate_bilingual_v10.py`: tests 15 English prompts; search, hybrid, and raw-neural have separate scores.
+- `.github/workflows/release_preview.yml`: trains 6,000 steps and publishes the new bilingual preview with language-specific evaluation reports.
+
+Generate the bilingual augmented dataset:
+
+```bash
+python build_dataset.py --max-variants 12
+```
+
+Run English-language regression tests after installing `torch`:
+
+```bash
+python evaluate_bilingual_v10.py --mode search
+python evaluate_bilingual_v10.py --mode hybrid --model-file hgai_model_v10_preview.pth
+python evaluate_bilingual_v10.py --mode raw-neural --model-file hgai_model_v10_preview.pth
+```
+
+The search/hybrid tests do not establish that the neural model can reason independently. Check the raw-neural Korean and English test reports separately. Preview checkpoints are marked `semantic_ready: false` unless their independent neural checks pass; hybrid mode then prioritizes retrieval by design.
+
+If you download the preview file from Releases, pass `--model-file hgai_model_v10_preview.pth` explicitly (the CLI's default checkpoint path is named `hgai_model_v10.pth`).

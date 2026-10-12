@@ -206,8 +206,32 @@ def curated_pairs():
         if k not in seen: seen.add(k); dedup.append(k)
     return dedup
 
+def english_paraphrase_question(q: str):
+    """Meaning-preserving English question variants; never add Korean wrappers."""
+    q=clean(q)
+    variants={q}
+    bare=q.rstrip("?!.");
+    if bare: variants.add(bare)
+    m=re.fullmatch(r"What is (.+)\?",q,flags=re.I)
+    if m:
+        term=m.group(1)
+        variants.update({f"What is {term}?",f"Explain {term}.",f"Tell me about {term}.",f"Can you explain {term}?",f"Define {term}."})
+    m=re.fullmatch(r"What does (.+) mean\?",q,flags=re.I)
+    if m:
+        term=m.group(1)
+        variants.update({f"What is the meaning of {term}?",f"Explain the meaning of {term}.",f"Define {term}."})
+    m=re.fullmatch(r"Explain (.+)",q,flags=re.I)
+    if m:
+        term=m.group(1).rstrip("?!.'")
+        variants.update({f"Can you explain {term}?",f"Tell me about {term}."})
+    return sorted({clean(v) for v in variants if clean(v)})
+
+
 def paraphrase_question(q: str):
-    q=clean(q); variants={q,q.rstrip("?!.")}; variants.add(q.replace("알려 줘","알려줘").replace("설명 해줘","설명해줘")); bare=q.rstrip("?!.")
+    q=clean(q)
+    if re.search(r"[A-Za-z]",q) and not re.search(r"[가-힣]",q):
+        return english_paraphrase_question(q)
+    variants={q,q.rstrip("?!.")}; variants.add(q.replace("알려 줘","알려줘").replace("설명 해줘","설명해줘")); bare=q.rstrip("?!.")
     if 2<=len(bare)<=120:
         variants.update({f"궁금한데 {q}",f"하나 물어볼게 {q}",f"질문 하나 할게 {q}",f"혹시 {q}",f"{bare} 좀 알려줘",f"{bare}에 대해 답해줘"})
     for rx,templates in GENERIC_REWRITES:
@@ -242,6 +266,8 @@ def main():
     ap=argparse.ArgumentParser(); ap.add_argument("--train",default=str(BASE_DIR/"train.txt")); ap.add_argument("--output",default=str(BASE_DIR/"augmented_train.txt")); ap.add_argument("--report",default=str(BASE_DIR/"DATASET_REPORT_V10.json")); ap.add_argument("--max-variants",type=int,default=8); args=ap.parse_args()
     train_path=Path(args.train); base=parse_pairs(train_path.read_text(encoding="utf-8")); extra_path=train_path.with_name("train_v10_extra.txt")
     if extra_path.exists(): base+=parse_pairs(extra_path.read_text(encoding="utf-8"))
+    english_path=train_path.with_name("train_en.txt")
+    if english_path.exists(): base+=parse_pairs(english_path.read_text(encoding="utf-8"))
     pairs,clean_stats=expand_pairs(base,args.max_variants,return_stats=True)
     Path(args.output).write_text("\n".join(f"{q}={a}" for q,a in pairs)+"\n",encoding="utf-8")
     report={"version":"v10","base_pairs":len(base),"curated_topics":len(CURATED_FACTS),"effective_pairs":len(pairs),"unique_questions":len({q for q,_ in pairs}),"trusted_answer_rewrites":clean_stats["trusted_answer_rewrites"],"trusted_fact_terms":clean_stats["trusted_fact_terms"],"sha256":dataset_hash(pairs),"external_model_required_at_runtime":False}

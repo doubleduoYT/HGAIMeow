@@ -14,6 +14,9 @@ def _focus_training_pairs(train_file: Path):
     extra_path=train_file.with_name("train_v10_extra.txt")
     if extra_path.exists():
         extra += parse_pairs(extra_path.read_text(encoding="utf-8"))
+    english_path=train_file.with_name("train_en.txt")
+    if english_path.exists():
+        extra += parse_pairs(english_path.read_text(encoding="utf-8"))
     # expand_pairs always adds curated_pairs(), which also absorbs knowledge.json.
     pairs=expand_pairs(extra,max_variants=12)
     # Keep the same deterministic 2% validation split out of the focus sampler.
@@ -89,6 +92,8 @@ def main():
         base=parse_pairs(train_file.read_text(encoding="utf-8"))
         extra_path=train_file.with_name("train_v10_extra.txt")
         if extra_path.exists(): base += parse_pairs(extra_path.read_text(encoding="utf-8"))
+        english_path=train_file.with_name("train_en.txt")
+        if english_path.exists(): base += parse_pairs(english_path.read_text(encoding="utf-8"))
         pairs=expand_pairs(base,max_variants=12)
         Path(args.export_dataset).write_text("\n".join(f"{q}={a}" for q,a in pairs)+"\n",encoding="utf-8")
         print(f"exported {len(pairs):,} pairs -> {args.export_dataset}")
