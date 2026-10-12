@@ -40,6 +40,7 @@ on:
       - "finalize_v10_checkpoint.py"
       - "train.txt"
       - "train_v10_extra.txt"
+      - "train_en.txt"
       - "knowledge.json"
       - "personality.json"
       - "eval_v10.json"
@@ -58,6 +59,7 @@ on:
       - "finalize_v10_checkpoint.py"
       - "train.txt"
       - "train_v10_extra.txt"
+      - "train_en.txt"
       - "knowledge.json"
       - "eval_v10.json"
       - "evaluate_v10.py"
@@ -80,7 +82,7 @@ jobs:
           pip install torch
       - name: Compile and deterministic dataset check
         run: |
-          python -m py_compile hgai_core.py run_hgai.py build_dataset.py train_v10_quality.py finalize_v10_checkpoint.py evaluate_v10.py evaluate_neural_v10.py teacher_reference.py
+          python -m py_compile hgai_core.py run_hgai.py build_dataset.py train_v10_quality.py finalize_v10_checkpoint.py evaluate_v10.py evaluate_neural_v10.py evaluate_bilingual_v10.py teacher_reference.py
           python build_dataset.py --max-variants 12
           cp augmented_train.txt /tmp/augmented_train.first.txt
           cp DATASET_REPORT_V10.json /tmp/report.first.json
@@ -91,6 +93,7 @@ jobs:
       - name: Search and diversity regression
         run: |
           python evaluate_v10.py --mode search --model-file does-not-exist.pth
+          python evaluate_bilingual_v10.py --mode search --model-file does-not-exist.pth --min-pass 0
       - name: Quality trainer and resume smoke
         run: |
           python train_v10_quality.py --preset main --steps 2 --threads 2 --seed 20260822 --model-file /tmp/hgai_smoke.pth
@@ -139,10 +142,11 @@ jobs:
           pip install torch
       - name: Compile and validate source
         run: |
-          python -m py_compile hgai_core.py run_hgai.py build_dataset.py train_v10_quality.py finalize_v10_checkpoint.py evaluate_v10.py evaluate_neural_v10.py teacher_reference.py
+          python -m py_compile hgai_core.py run_hgai.py build_dataset.py train_v10_quality.py finalize_v10_checkpoint.py evaluate_v10.py evaluate_neural_v10.py evaluate_bilingual_v10.py teacher_reference.py
           python build_dataset.py --max-variants 12
           cat DATASET_REPORT_V10.json
           python evaluate_v10.py --mode search --model-file does-not-exist.pth
+          python evaluate_bilingual_v10.py --mode search --model-file does-not-exist.pth --min-pass 0
       - name: Train standalone HGAI model
         run: |
           python train_v10_quality.py --preset "$PRESET" --steps "$STEPS" --threads 2 --model-file hgai_model_v10.pth
@@ -189,6 +193,8 @@ jobs:
       - name: Practical hybrid regression
         run: |
           python evaluate_v10.py --mode hybrid --preset "$PRESET" --model-file hgai_model_v10.pth
+          python evaluate_bilingual_v10.py --mode hybrid --model-file hgai_model_v10.pth --min-pass 0 --report EN_EVAL_RUNTIME.json
+          python evaluate_bilingual_v10.py --mode raw-neural --model-file hgai_model_v10.pth --min-pass 0 --report EN_NEURAL_EVAL_RUNTIME.json
       - name: Finalize deployable checkpoint
         run: |
           python finalize_v10_checkpoint.py --model-file hgai_model_v10.pth --status-file MODEL_STATUS_RUNTIME.json --neural-report NEURAL_EVAL_RUNTIME.json
@@ -196,7 +202,7 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p dist
-          cp hgai_core.py run_hgai.py build_dataset.py train_v10_quality.py finalize_v10_checkpoint.py teacher_reference.py train.txt train_v10_extra.txt augmented_train.txt knowledge.json personality.json eval_v10.json evaluate_v10.py evaluate_neural_v10.py requirements.txt README.md DATASET_REPORT_V10.json MODEL_STATUS_RUNTIME.json NEURAL_EVAL_RUNTIME.json hgai_model_v10.pth dist/
+          cp hgai_core.py run_hgai.py build_dataset.py train_v10_quality.py finalize_v10_checkpoint.py teacher_reference.py train.txt train_v10_extra.txt train_en.txt augmented_train.txt knowledge.json personality.json eval_v10.json evaluate_v10.py evaluate_neural_v10.py evaluate_bilingual_v10.py requirements.txt README.md DATASET_REPORT_V10.json EN_EVAL_RUNTIME.json EN_NEURAL_EVAL_RUNTIME.json MODEL_STATUS_RUNTIME.json NEURAL_EVAL_RUNTIME.json hgai_model_v10.pth dist/
           ls -lah dist
       - name: Upload artifact
         uses: actions/upload-artifact@v4
