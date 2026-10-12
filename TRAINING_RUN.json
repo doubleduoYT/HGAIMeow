@@ -1,11 +1,11 @@
 {
   "workflow": "Train HGAI v10 Practical",
-  "run_id": 32563535928,
-  "run_number": 34,
+  "run_id": 38323996095,
+  "run_number": 40,
   "run_attempt": 1,
-  "job_status": "failure",
-  "trigger_sha": "710eb0f3fec90c762ba49500d7a37cacbeaf7c87",
+  "job_status": "success",
+  "trigger_sha": "7d65eb874dc3caeff59537cde300b3e4f8fd9336",
   "preset": "main",
   "artifact_name": "hgai-v10-main",
-  "recorded_at_utc": "2026-08-22T09:06:51.608234+00:00"
+  "recorded_at_utc": "2026-10-12T23:54:36.661874+00:00"
 }
