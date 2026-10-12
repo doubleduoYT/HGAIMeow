@@ -100,6 +100,9 @@ def train(args):
     extra_path=Path(args.train_file).with_name("train_v10_extra.txt")
     if extra_path.exists():
         focus_seed += h.parse_pairs(extra_path.read_text(encoding="utf-8"))
+    english_path=Path(args.train_file).with_name("train_en.txt")
+    if english_path.exists():
+        focus_seed += h.parse_pairs(english_path.read_text(encoding="utf-8"))
     trset=set(tr)
     core=[x for x in h.expand_pairs(focus_seed,max_variants=12) if x in trset]
 
@@ -116,7 +119,7 @@ def train(args):
     eval_seed=args.seed+9173
     last_loss=None; last_val=999.0
     print(f"HGAI quality trainer preset={args.preset} params={h.count_params(model):,} pairs={len(pairs):,} core={len(core):,} start={start} device={device}")
-    print("curriculum: core focus 0.58 -> 0.45 -> 0.32; context general=0.22 core=0.08; validation context=0")
+    print("curriculum: Korean + English focus 0.58 -> 0.45 -> 0.32; context general=0.22 core=0.08; validation context=0")
 
     for local in range(args.steps):
         step=start+local
