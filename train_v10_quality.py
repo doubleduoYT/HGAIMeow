@@ -64,6 +64,41 @@ def move_optimizer_state(opt,device):
                 st[k]=v.to(device)
 
 
+def warmstart_model(model, new_vocab, file_path, preset):
+    """Transfer compatible pretrained weights and align tied token embeddings by token string."""
+    ck=h.checkpoint_load(file_path)
+    if not ck:
+        raise SystemExit(f"initial model not found or unreadable: {file_path}")
+    if ck.get("version")!="hgai-v10" or ck.get("preset")!=preset:
+        raise SystemExit("initial checkpoint version or preset mismatch")
+    old_vocab=ck.get("vocab",[])
+    old_weights=ck.get("model",{})
+    if "embed.weight" not in old_weights:
+        raise SystemExit("initial checkpoint lacks embeddings")
+    new_state=model.state_dict()
+    transferred=[]
+    for key,weight in new_state.items():
+        if key in ("embed.weight","head.weight"):
+            continue
+        prev=old_weights.get(key)
+        if prev is not None and prev.shape==weight.shape:
+            weight.copy_(prev)
+            transferred.append(key)
+    vocab_map={token:i for i,token in enumerate(old_vocab)}
+    embedding=new_state["embed.weight"]
+    old_embedding=old_weights["embed.weight"]
+    matching=0
+    for new_index,token in enumerate(new_vocab):
+        old_index=vocab_map.get(token)
+        if old_index is not None and old_index < old_embedding.shape[0]:
+            embedding[new_index].copy_(old_embedding[old_index])
+            matching+=1
+    new_state["head.weight"]=embedding
+    model.load_state_dict(new_state)
+    print(f"warmstarted checkpoint={file_path} matched_tokens={matching}/{len(new_vocab)} transferred_tensors={len(transferred)}")
+    return {"init_checkpoint":str(file_path),"shared_vocab_tokens":matching}
+
+
 def train(args):
     if args.threads > 0:
         torch.set_num_threads(args.threads)
@@ -93,6 +128,8 @@ def train(args):
     else:
         tok=h.Tokenizer(h.build_vocab(tr,cfg["max_vocab"]))
         model=h.HGAIModel(len(tok.vocab),cfg).to(device)
+        if args.init_model_file:
+            warmstart_model(model,tok.vocab,args.init_model_file,args.preset)
         start=0; best=999.0; best_step=0; best_state=None
 
     # Focus pool: curated facts + knowledge.json + explicit v10/user additions.
@@ -169,6 +206,10 @@ def main():
     ap.add_argument("--threads",type=int,default=2)
     ap.add_argument("--device",default="auto",choices=["auto","cpu","cuda"])
     ap.add_argument("--resume",action="store_true")
-    args=ap.parse_args(); train(args)
+    ap.add_argument("--init-model-file",default="",help="Optional pretrained v10 checkpoint for vocabulary-aligned warm start")
+    args=ap.parse_args()
+    if args.resume and args.init_model_file:
+        ap.error("--resume and --init-model-file cannot be combined")
+    train(args)
 
 if __name__=="__main__": main()
