@@ -10,6 +10,7 @@ from build_dataset import CURATED_FACTS,curated_pairs,expand_pairs,is_obsolete_p
 
 BASE_DIR=Path(__file__).resolve().parent
 SYSTEM_TEXT="너는 HGAI다냥. 한국어로 정확하고 자연스럽게 답하고 말끝에 냥을 자연스럽게 붙인다냥. 모르는 사실은 지어내지 않는다냥."
+FALLBACK_RESPONSE="잘 모르겠다냥 새로 배우고 싶다냥 :3"
 SPECIAL=["<pad>","<unk>","<|system|>","<|user|>","<|context|>","<|assistant|>","<|end|>"]
 PRESETS={
  "main":{"block_size":256,"batch_size":4,"n_embd":224,"n_head":7,"n_layer":5,"ffn_hidden":640,"dropout":.08,"max_vocab":16000},
@@ -252,19 +253,19 @@ class HGAIEngine:
   q=clean_text(user)
   if not q:return "냥? 뭔가 말해줘라냥 :3"
   if mode=="raw-neural":
-   g=neural_generate(self.model,self.tok,self.device,self.cfg,q,None,self.history,temperature,top_k,top_p,max_new_tokens) if self.model else None;a=fix_nyang(g) if quality_ok(g) else "순수 신경망 생성이 아직 불안정하다냥";self._save(q,a);return a
+   g=neural_generate(self.model,self.tok,self.device,self.cfg,q,None,self.history,temperature,top_k,top_p,max_new_tokens) if self.model else None;a=fix_nyang(g) if quality_ok(g) else FALLBACK_RESPONSE;self._save(q,a);return a
   for fn in (self.remember_rule,calculator_reply,curated_direct_reply):
    a=fn(q)
    if a:self._save(q,a);return a
   ex=self.retriever.exact_answers(q)
   if ex:a=fix_nyang(self.rng.choice(ex));self._save(q,a);return a
   hits=self.retriever.search(q);best=hits[0] if hits else None
-  if mode=="search":a=best.answer if best and best.score>=.52 else "잘 모르겠다냥 새로 배우고 싶다냥 :3";self._save(q,a);return fix_nyang(a)
+  if mode=="search":a=best.answer if best and best.score>=.52 else FALLBACK_RESPONSE;self._save(q,a);return fix_nyang(a)
   if best and best.score>=.86:a=fix_nyang(self.rng.choice([h.answer for h in hits if h.score>=best.score-.03] or [best.answer]));self._save(q,a);return a
   if best and best.score>=.50:
    g=neural_generate(self.model,self.tok,self.device,self.cfg,q,best.answer,self.history,temperature,top_k,top_p,max_new_tokens) if self.model and (self.neural_ready or mode=="neural") else None;a=g if quality_ok(g,best.answer) else best.answer;self._save(q,a);return fix_nyang(a)
   if self.model and (mode=="neural" or (mode=="hybrid" and self.neural_ready)):
    g=neural_generate(self.model,self.tok,self.device,self.cfg,q,None,self.history,temperature,top_k,top_p,max_new_tokens)
    if quality_ok(g):self._save(q,g);return fix_nyang(g)
-  a="그건 아직 확실하게 모르겠다냥 아는 척 지어내기보단 새로 배우는 게 낫다냥 :3";self._save(q,a);return a
+  a=FALLBACK_RESPONSE;self._save(q,a);return a
  def model_info(self):return {"version":"hgai-v10","preset":self.preset,"runtime_pairs":len(self.pairs),"model_loaded":self.model is not None,"params":count_params(self.model),"neural_ready":self.neural_ready,"checkpoint":self.checkpoint_meta,"device":self.device,"external_model_required":False}
