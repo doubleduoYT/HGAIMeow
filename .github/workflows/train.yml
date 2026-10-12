@@ -147,9 +147,18 @@ jobs:
           cat DATASET_REPORT_V10.json
           python evaluate_v10.py --mode search --model-file does-not-exist.pth
           python evaluate_bilingual_v10.py --mode search --model-file does-not-exist.pth --min-pass 0
-      - name: Train standalone HGAI model
+      - name: Fetch previous main checkpoint
+        if: env.PRESET == 'main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download v10.0.0-preview.3 --repo "${{ github.repository }}" --pattern hgai_model_v10_preview.pth --dir .
+      - name: Train bilingual HGAI model
         run: |
-          python train_v10_quality.py --preset "$PRESET" --steps "$STEPS" --threads 2 --model-file hgai_model_v10.pth
+          INIT_FLAG=""
+          if [ "$PRESET" = "main" ] && [ -f hgai_model_v10_preview.pth ]; then
+            INIT_FLAG="--init-model-file hgai_model_v10_preview.pth"
+          fi
+          python train_v10_quality.py --preset "$PRESET" --steps "$STEPS" --threads 2 --model-file hgai_model_v10.pth $INIT_FLAG
       - name: Continue training when validation gate needs it
         shell: bash
         run: |
