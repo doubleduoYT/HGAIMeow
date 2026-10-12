@@ -11,8 +11,10 @@ from build_dataset import CURATED_FACTS,curated_pairs,expand_pairs,is_obsolete_p
 BASE_DIR=Path(__file__).resolve().parent
 SYSTEM_TEXT="너는 HGAI다냥. 한국어로 정확하고 자연스럽게 답하고 말끝에 냥을 자연스럽게 붙인다냥. 모르는 사실은 지어내지 않는다냥."
 SYSTEM_TEXT_EN="You are HGAI. Answer clearly in English, stay factual, and use a light cat-like meow."
+def is_english_question(q):
+ return bool(re.search(r"[A-Za-z]",q)) and not re.search(r"[가-힣]",q)
 def system_text_for_question(q):
- return SYSTEM_TEXT_EN if re.search(r"[A-Za-z]",q) and not re.search(r"[가-힣]",q) else SYSTEM_TEXT
+ return SYSTEM_TEXT_EN if is_english_question(q) else SYSTEM_TEXT
 FALLBACK_RESPONSE="잘 모르겠다냥 새로 배우고 싶다냥 :3"
 SPECIAL=["<pad>","<unk>","<|system|>","<|user|>","<|context|>","<|assistant|>","<|end|>"]
 PRESETS={
@@ -265,8 +267,14 @@ class HGAIEngine:
    a=fn(q)
    if a:self._save(q,a);return a
   ex=self.retriever.exact_answers(q)
-  if ex:a=fix_nyang(self.rng.choice(ex));self._save(q,a);return a
-  hits=self.retriever.search(q);best=hits[0] if hits else None
+  if ex:
+   choices=[a for a in ex if not re.search(r"[가-힣]",a)] if is_english_question(q) else ex
+   a=fix_nyang(self.rng.choice(choices or ex));self._save(q,a);return a
+  hits=self.retriever.search(q)
+  if is_english_question(q):
+   english_hits=[h for h in hits if not re.search(r"[가-힣]",h.answer)]
+   if english_hits: hits=english_hits
+  best=hits[0] if hits else None
   if mode=="search":a=best.answer if best and best.score>=.52 else FALLBACK_RESPONSE;self._save(q,a);return fix_nyang(a)
   if best and best.score>=.86:a=fix_nyang(self.rng.choice([h.answer for h in hits if h.score>=best.score-.03] or [best.answer]));self._save(q,a);return a
   if best and best.score>=.50:
