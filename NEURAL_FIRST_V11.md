@@ -45,3 +45,31 @@ python evaluate_bilingual_v10.py --mode raw-neural --model-file hgai_model_v11.p
 2. Add substantially more **genuine, reviewed, varied dialogue** and held-out sessions.
 3. Improve tokenizer, context length, independent split rules and model size only after checking quality and Raspberry Pi RAM.
 4. If the trained candidate is better, deploy after making a backup; update the persistent socket server separately for per-channel history isolation.
+
+## v11.1 dialogue-aware update (2026-10-13)
+
+Added a separate experiment, without changing the v11 files or the Raspberry Pi deployment.
+
+- `train_dialogues_v11_1_extra.jsonl`: 74 additional Korean/English two-turn scenarios (148 turns).
+- `validate_dialogues_v11_1.jsonl`: 20 separate scenarios (40 turns) for selecting a candidate; these records are excluded from the fine-tuning gradient data. Normalized dialogue question overlap is checked.
+- `train_neural_v11_1.py`: trains with a v10-compatible checkpoint vocabulary and both v11 dialogue data files. It selects the checkpoint minimizing held-out **teacher-forced** dialogue loss (with a penalty and upper bound for regression of general validation loss). The selected weights are stored under `model`; the most recent weights under `resume_model`, for diagnostics.
+- `.github/workflows/train_neural_v11_1.yml`: GitHub-hosted CPU smoke test, 1,600 training steps, the independent raw-neural 12-conversation test, and 10 Korean/15 English baseline regression tests. Reports and checkpoint are saved as an Actions artifact.
+- English neural failures now return English uncertainty text, not a Korean fallback. This is a runtime-language fix, not evidence that the model learned fluent English.
+
+**Important distinctions**:
+
+1. A lower held-out teacher-forced loss can favor better modeling of *specific dialogue patterns* but **does not guarantee natural answers**. Use the independent free-generation reports and manual review to decide deployment.
+2. The validation dialogues are held out from **this continuation run**. The base v10 checkpoint's full earlier dataset history is not exhaustively audited for near-duplicate content.
+3. The general validation split still has paraphrase-family contamination risks from the inherited dataset. Its loss is used as a bounded regression indicator, not evidence of independent generalization.
+4. With roughly 209 dialogue training turns and ~4.7 million parameters, open-domain natural conversation remains a long-term goal, not a solved feature.
+5. The output is intentionally an **experimental candidate**. GitHub Actions does not install it on the Raspberry Pi or change the bot services. Retain the `--serve` daemon variant and existing model backups.
+
+Local training, after downloading the compatible v10 Preview 4 `.pth`:
+
+```bash
+python build_dataset.py --max-variants 12
+python train_neural_v11_1.py --init-model-file hgai_model_v10_preview.pth --model-file hgai_model_v11_1.pth --steps 1600 --threads 2
+python evaluate_neural_v11.py --model-file hgai_model_v11_1.pth --report V11_1_DIALOGUE_EVAL.json
+python evaluate_neural_v10.py --model-file hgai_model_v11_1.pth --min-pass 0
+python evaluate_bilingual_v10.py --mode raw-neural --model-file hgai_model_v11_1.pth --min-pass 0
+```
