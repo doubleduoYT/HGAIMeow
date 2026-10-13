@@ -28,7 +28,7 @@ GAME_ALIASES = {
     "Terraria": (r"테라리아", r"\bterraria\b"),
 }
 FACT_QUESTION = re.compile(
-    r"누구|누가|뭐|무엇|어떤|알려|설명|목적|특징|이름|방법|언어|관계|왜|정체|"
+    r"누구|누가|뭐|무엇|어떤|알려|설명|목적|특징|이름|방법|언어|관계|왜|정체|언제|출시|연도|날짜|가격|얼마|몇|"
     r"\bwho\b|\bwhat\b|\bwhich\b|\bwhy\b|\bhow\b|\bdescribe\b|\bexplain\b|\btell me\b|\bcan you\b|\bis\b|\bare\b",
     re.I,
 )
@@ -78,14 +78,16 @@ def find_fact(question: str, *, facts_path: str = "game_facts_v13.json"):
     if not question.strip(): return None
     registry=load_facts(facts_path)
     games=detect_games(question)
+    # Ignore intent mismatches that would confidently return the wrong fact.
+    excluded=re.search(r"성우|목소리|더빙|voice\s+actor|voice\s+of|발매일|출시일|release\s+date|price|가격|비용",question,re.I)
     for game,identifier,subject,intent in INTENT_RULES:
-        if game not in games or not re.search(subject,question,re.I) or not re.search(intent,question,re.I):
+        if excluded or game not in games or not re.search(subject,question,re.I) or not re.search(intent,question,re.I):
             continue
         item=registry.get((game,identifier))
         if item:return item
     # For other reviewed game facts, accept only almost-identical
     # questions, with an explicit game anchor; never promote weak matches.
-    if len(games)!=1:return None
+    if excluded or len(games)!=1:return None
     game=games[0]
     lang=language_of(question)
     target=_normalized(question)
