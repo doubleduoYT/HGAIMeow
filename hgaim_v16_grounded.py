@@ -41,7 +41,7 @@ STYLE_UNKNOWN = {
 # Each rule requires both a game anchor and the exact fact intent. Unknown
 # questions about a related item deliberately do not return an unrelated fact.
 INTENT_RULES = [
-    ("Casualties: Unknown", "lore-osprey", r"(?<![A-Za-z0-9])osprey(?![A-Za-z0-9])", r"옮기|운송|이동|순간이동|건물|목적|설계|어떤|뭐|what|move|transport|building|teleport|purpose|designed"),
+    ("Casualties: Unknown", "lore-osprey", r"(?<![A-Za-z0-9])osprey(?![A-Za-z0-9])", r"옮기|옮겨|옮겼|운송|이동|순간이동|건물|목적|설계|어떤|뭐|what|move|transport|building|teleport|purpose|designed"),
     ("Casualties: Unknown", "lore-saw03", r"(?<![A-Za-z0-9])saw[-_ ]?0?3(?![A-Za-z0-9])", r"털|색|외형|모습|특징|fur|color|colour|appearance|look"),
     ("Casualties: Unknown", "lore-yellowblood", r"노란\s*(?:피|혈액)|yellow\s*blood", r"방사선|회복|재생|복구|치유|특징|저항|radiation|heal|repair|regenerat|remarkable|special"),
     ("Gunsaw", "developer", r"(?<![A-Za-z0-9])gunsaw(?![A-Za-z0-9])", r"개발자|제작자|만든\s*사람|누가\s*만들|who\s*(?:made|created|developed)|developer|creator|developed\s+by"),
@@ -107,12 +107,12 @@ def find_fact(question: str, *, facts_path: str = "game_facts_v13.json"):
         return None
     # Ignore intent mismatches that would confidently return the wrong fact.
     excluded=re.search(
-        r"성우|목소리|더빙|voice\s+actor|voice\s+of|발매일|출시일|release\s+date|price|가격|비용|"
+        r"성우|목소리|더빙|voice\s+actor|voice\s+of|발매일|출시일|release\s+date|price|가격|비용|나이|몇\s*살|생일|태어|\bage\b|\bbirthday\b|\bborn\b|"
         r"레벨\s*에디터.{0,18}(?:누가|만들|제작자|개발자)|level\s+editor.{0,28}(?:who|made|creator|developer)",
         question, re.I)
     # Mentioning a level editor is NOT evidence of who created that editor.
     editor_authorship = (
-        bool(re.search(r"레벨\\s*에디터|level\\s+editor", question, re.I)) and
+        bool(re.search(r"레벨\s*에디터|level\s+editor", question, re.I)) and
         bool(re.search(r"누가|만들|제작자|개발자|who|made|created|developer|creator", question, re.I))
     )
     if editor_authorship:
