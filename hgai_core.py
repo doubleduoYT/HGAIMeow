@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 from build_dataset import CURATED_FACTS,curated_pairs,expand_pairs,is_obsolete_pair,parse_pairs
+from nyang_style_v14 import nyangify
 
 BASE_DIR=Path(__file__).resolve().parent
 SYSTEM_TEXT="너는 HGAI다냥. 한국어로 정확하고 자연스럽게 답하고 말끝에 냥을 자연스럽게 붙인다냥. 모르는 사실은 지어내지 않는다냥."
@@ -272,7 +273,7 @@ class HGAIEngine:
   if m:self.user_name=m.group(1);return f"기억했다냥 이제 {self.user_name}라고 부르겠다냥 :3"
   if re.search(r"내\s*이름.*(뭐|기억)",q):return f"네 이름은 {self.user_name}다냥" if hasattr(self,"user_name") else "아직 이름을 못 들었다냥"
  def _save(self,q,a):self.history.append((q,a));self.history=self.history[-8:]
- def reply(self,user,mode="hybrid",temperature=.72,top_k=40,top_p=.92,max_new_tokens=96):
+ def _reply_unstyled(self,user,mode="hybrid",temperature=.72,top_k=40,top_p=.92,max_new_tokens=96):
   q=clean_text(user)
   if not q:return "냥? 뭔가 말해줘라냥 :3"
   if mode=="raw-neural":
@@ -297,4 +298,12 @@ class HGAIEngine:
    g=neural_generate(self.model,self.tok,self.device,self.cfg,q,None,self.history,temperature,top_k,top_p,max_new_tokens)
    if quality_ok(g):self._save(q,g);return fix_nyang(g)
   a=fallback_for_question(q);self._save(q,a);return a
+ def reply(self,user,mode="hybrid",temperature=.72,top_k=40,top_p=.92,max_new_tokens=96):
+  """Backward-compatible API: enforce optional cat endings for every reply path."""
+  answer=self._reply_unstyled(user,mode,temperature,top_k,top_p,max_new_tokens)
+  language="en" if is_english_question(clean_text(user)) else "ko"
+  styled=nyangify(answer,language)
+  if self.history and self.history[-1][0]==clean_text(user):
+   self.history[-1]=(self.history[-1][0],styled)
+  return styled
  def model_info(self):return {"version":"hgai-v10","preset":self.preset,"runtime_pairs":len(self.pairs),"model_loaded":self.model is not None,"params":count_params(self.model),"neural_ready":self.neural_ready,"checkpoint":self.checkpoint_meta,"device":self.device,"external_model_required":False}
