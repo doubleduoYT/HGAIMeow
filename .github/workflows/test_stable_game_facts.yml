@@ -1,0 +1,61 @@
+name: HGAIM v10.2 Stable Game Facts Backport
+
+on:
+  push:
+    branches: [release/hgaim-v10-2-v16-game-facts, main]
+    paths:
+      - hgai_core.py
+      - hgaim_v16_context.py
+      - hgaim_v16_grounded.py
+      - nyang_style_v14.py
+      - game_facts_v13.json
+      - test_v10_v16_backport.py
+      - .github/workflows/test_stable_game_facts.yml
+  pull_request:
+    paths:
+      - hgai_core.py
+      - hgaim_v16_context.py
+      - hgaim_v16_grounded.py
+      - nyang_style_v14.py
+      - game_facts_v13.json
+      - test_v10_v16_backport.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stable:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile the original engine and the local game modules
+        run: |
+          python -m py_compile hgai_core.py run_hgai.py hgaim_v16_grounded.py hgaim_v16_context.py nyang_style_v14.py test_v10_v16_backport.py
+
+      - name: Run 16 stable engine regression tests
+        run: |
+          python -m unittest -v test_v10_v16_backport
+
+      - name: Real existing run_hgai.py CLI smoke tests without a new model
+        run: |
+          python run_hgai.py --info
+          python run_hgai.py --once "C:U의 OSPREY는 뭘 옮겨?" --mode hybrid
+          python run_hgai.py --once "Who developed Gunsaw?" --mode hybrid
+
+      - name: Verify source-attributed fact answers and preserved raw-neural mode
+        run: |
+          python - <<'PY'
+          from hgai_core import HGAIEngine, FALLBACK_RESPONSE
+          engine=HGAIEngine(load_model=False)
+          a=engine.reply('Roblox는 무슨 언어로 스크립트를 만들어?')
+          assert 'Luau' in a, a
+          raw=engine.reply('Who developed Gunsaw?',mode='raw-neural')
+          assert raw==FALLBACK_RESPONSE, raw
+          print('PASS: source game facts work without Torch and raw neural remains independent')
+          PY
