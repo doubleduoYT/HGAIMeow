@@ -1,0 +1,119 @@
+name: HGAIM v12 Generative Quality Experiment
+
+on:
+  push:
+    branches:
+      - feature/hgaim-v12-neural-quality
+    paths:
+      - hgai_core.py
+      - train_neural_v12.py
+      - train_dialogues_v12.jsonl
+      - validate_dialogues_v12.jsonl
+      - evaluate_generation_v12.py
+      - .github/workflows/train_neural_v12.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: hgaim-v12-generative-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PyTorch and evaluation libraries
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt wordfreq
+
+      - name: Validate training and held-out dialogue data
+        run: |
+          python -m py_compile hgai_core.py train_v10_quality.py train_neural_v11.py train_neural_v11_1.py train_neural_v12.py evaluate_neural_v11.py evaluate_generation_v12.py
+          python build_dataset.py --max-variants 12
+          python - <<'PY'
+          from train_neural_v12 import read_dialogues, ensure_holdout
+          from train_neural_v11 import dialogue_examples
+          train = read_dialogues(['train_dialogues_v11.jsonl', 'train_dialogues_v11_1_extra.jsonl', 'train_dialogues_v12.jsonl'])
+          heldout = dialogue_examples('validate_dialogues_v12.jsonl')
+          ensure_holdout(train, heldout)
+          assert len(train) >= 600 and len(heldout) == 80
+          print('PASS: independent continuation dialogue sets',len(train),len(heldout))
+          PY
+
+      - name: Download trained v11.1 baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p previous
+          gh run download 38368251370 --repo "${{ github.repository }}" --name hgaim-v11-1-dialogue-aware-5 --dir previous
+          cp previous/hgai_model_v11_1.pth ./hgai_model_v11_1.pth
+          test -s hgai_model_v11_1.pth
+
+      - name: Smoke-test v12 trainer using previous model
+        run: |
+          python train_neural_v12.py --steps 2 --eval-every 1 --grad-accum 1 --model-file /tmp/hgai_v12_smoke.pth
+          python - <<'PY'
+          from hgai_core import checkpoint_load
+          c=checkpoint_load('/tmp/hgai_v12_smoke.pth')
+          assert c['version']=='hgai-v10'
+          assert c['preset']=='main'
+          assert c['model'] and c['resume_model']
+          assert 'selection_dialogue_loss' in c
+          print('PASS: v12 checkpoint compatible')
+          PY
+
+      - name: Measure v11.1 baseline with current decoder
+        run: |
+          python evaluate_generation_v12.py --model-file hgai_model_v11_1.pth --report V12_BASELINE_GENERATION.json
+
+      - name: Fine-tune v12 with effective batch 8
+        run: |
+          python train_neural_v12.py --steps 5400 --eval-every 200 --grad-accum 2 --threads 2 --lr 0.00003 --model-file hgai_model_v12.pth --init-model-file hgai_model_v11_1.pth
+
+      - name: Independently evaluate raw-neural generation
+        run: |
+          python evaluate_generation_v12.py --model-file hgai_model_v12.pth --report V12_GENERATION_EVAL.json
+          python evaluate_neural_v11.py --model-file hgai_model_v12.pth --report V12_DIALOGUE_EVAL.json
+          python evaluate_neural_v10.py --model-file hgai_model_v12.pth --min-pass 0 --report V12_KO_RAW.json
+          python evaluate_bilingual_v10.py --mode raw-neural --model-file hgai_model_v12.pth --min-pass 0 --report V12_EN_RAW.json
+
+      - name: Summarize diagnostic differences
+        run: |
+          python - <<'PY'
+          import json
+          b=json.load(open('V12_BASELINE_GENERATION.json',encoding='utf-8'))
+          n=json.load(open('V12_GENERATION_EVAL.json',encoding='utf-8'))
+          s=json.load(open('hgai_model_v12.training.json',encoding='utf-8'))
+          for label,d in [('baseline',b),('candidate',n)]:
+              print(label,'lexical_ratio=',round(d['english_lexical_ratio'],4),'fallbacks=',d['fallback_count'],'english_korean_mixed=',d['english_korean_mixed'])
+          print('checkpoint selected_step=',s['selected_step'])
+          print('heldout_dialogue_loss=',s['baseline_dialogue_loss'],'->',s['chosen_dialogue_loss'])
+          print('CANDIDATE IS EXPERIMENTAL. Semantic and dialogue quality require human review.')
+          PY
+
+      - name: Save model and detailed diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hgaim-v12-generative-candidate-${{ github.run_number }}
+          path: |
+            hgai_model_v12.pth
+            hgai_model_v12.training.json
+            V12_BASELINE_GENERATION.json
+            V12_GENERATION_EVAL.json
+            V12_DIALOGUE_EVAL.json
+            V12_KO_RAW.json
+            V12_EN_RAW.json
+          if-no-files-found: warn
+          retention-days: 30

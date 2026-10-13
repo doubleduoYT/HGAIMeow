@@ -1,0 +1,112 @@
+name: HGAIM v14 Pretrained Bilingual LoRA & Nyang Fix
+
+on:
+  push:
+    branches:
+      - feature/hgaim-v14-pretrained-nyang
+    paths:
+      - nyang_style_v14.py
+      - hgaim_v14_client.py
+      - hgai_core.py
+      - prepare_sft_v14.py
+      - train_lora_v14.py
+      - evaluate_pretrained_v14.py
+      - test_v14_style.py
+      - .github/workflows/train_pretrained_v14.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: v14-pretrained-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      TOKENIZERS_PARALLELISM: "false"
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run nyang speech and local inference unit tests
+        run: |
+          python -m unittest -v test_v14_style
+          python -m py_compile hgai_core.py nyang_style_v14.py prepare_sft_v14.py train_lora_v14.py evaluate_pretrained_v14.py hgaim_v14_client.py
+
+      - name: Download existing v13 game knowledge dataset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p v13_game_data
+          gh run download 38380993661 --repo "${{ github.repository }}" --name hgaim-v13-bilingual-game-expert-3 --dir previous
+          cp previous/v13_game_data/game_qa_v13_train.jsonl v13_game_data/
+          cp previous/v13_game_data/game_qa_v13_holdout.jsonl v13_game_data/
+          test -s v13_game_data/game_qa_v13_train.jsonl
+          test -s v13_game_data/game_qa_v13_holdout.jsonl
+
+      - name: Create human-style bilingual training examples without duplication
+        run: |
+          python prepare_sft_v14.py --output v14_data
+          python - <<'PY'
+          import json
+          r=json.load(open("v14_data/report_v14.json",encoding="utf-8"))
+          assert r["training_records"]>=700,r
+          assert r["game_records"]>=350,r
+          assert r["heldout_records"]>=35,r
+          assert all(r["training_languages"].get(lang,0)>150 for lang in ("en","ko")),r
+          print("PASS: bilingual source-grounded SFT, group holdout and nyang examples")
+          PY
+
+      - name: Install pretrained training dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "torch>=2.3,<3" "transformers>=4.45,<5" "peft>=0.13,<1" "accelerate>=1,<2" "safetensors>=0.4"
+
+      - name: One-step pretrained LoRA smoke test
+        run: |
+          python train_lora_v14.py --steps 1 --eval-every 1 --max-length 128 --output /tmp/hgaim_v14_smoke
+
+      - name: Train bilingual cat-speech model
+        run: |
+          python train_lora_v14.py --steps 48 --eval-every 12 --max-length 192 --threads 2 --output hgaim_v14_lora
+
+      - name: Evaluate pretrained baseline and adapted model without retrieval
+        run: |
+          python evaluate_pretrained_v14.py --limit 6 --max-new-tokens 72 --report V14_BASE_GENERATION.json
+          python evaluate_pretrained_v14.py --limit 6 --max-new-tokens 72 --adapter hgaim_v14_lora --report V14_TUNED_GENERATION.json
+          python - <<'PY'
+          import json
+          r=json.load(open("hgaim_v14_lora/training_report.json",encoding="utf-8"))
+          print("SELECTED STEP:",r["selected_step"])
+          print("HELDOUT LOSS:",r["baseline_holdout_loss"],"->",r["selected_holdout_loss"])
+          b=json.load(open("V14_BASE_GENERATION.json",encoding="utf-8"))
+          t=json.load(open("V14_TUNED_GENERATION.json",encoding="utf-8"))
+          for i,(be,te) in enumerate(zip(b["responses"],t["responses"])):
+              print("PROMPT",i+1,be["prompt"])
+              print("BASE ",be["raw"])
+              print("TUNED",te["raw"])
+          print("Human review required. No auto-deployment.")
+          PY
+
+      - name: Save adapter and quality reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hgaim-v14-pretrained-lora-${{ github.run_number }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            hgaim_v14_lora/
+            v14_data/report_v14.json
+            V14_BASE_GENERATION.json
+            V14_TUNED_GENERATION.json

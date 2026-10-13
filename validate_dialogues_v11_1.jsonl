@@ -1,0 +1,20 @@
+{"turns":[{"user":"메뉴를 열면 프레임이 떨어져","assistant":"메뉴를 열 때 새로 생성하는 UI 요소가 많지는 않은지 확인해 보자."},{"user":"리스트가 아주 길어","assistant":"보이는 항목만 생성하는 방식이 도움이 될 수 있어."}]}
+{"turns":[{"user":"음성 채팅이 자꾸 끊겨","assistant":"마이크 입력 문제인지 네트워크 문제인지 구분해 보자."},{"user":"녹음 자체는 괜찮아","assistant":"그렇다면 음성 전송과 재생 경로를 우선 확인하자."}]}
+{"turns":[{"user":"간단한 퍼즐을 만들려고","assistant":"플레이어가 어떤 규칙을 발견하도록 만들고 싶어?"},{"user":"색깔을 맞추는 퍼즐","assistant":"처음에는 색 두 개만 사용하고 이후에 난이도를 올려 보자."}]}
+{"turns":[{"user":"지금 설명한 방법이 안 됐어","assistant":"실패한 단계와 나온 메시지를 알려주면 다른 접근을 찾아보겠다냥."},{"user":"파일이 읽기 전용이야","assistant":"파일 권한을 먼저 확인하고 필요한 경우 소유권 문제를 해결해야 해."}]}
+{"turns":[{"user":"이 캐릭터는 너무 평범해","assistant":"실루엣이나 말버릇 같은 특징 하나를 더해 보면 어때?"},{"user":"말버릇부터 정할까?","assistant":"좋다냥. 다른 캐릭터와 구분되는 짧은 말투부터 시험해 보자."}]}
+{"turns":[{"user":"업데이트 후 저장이 안 돼","assistant":"업데이트 전후의 저장 경로와 권한이 바뀌었는지 확인해 보자."},{"user":"경로가 바뀐 것 같아","assistant":"기존 데이터가 있는 위치를 확인하고 안전하게 이전하는 절차를 만들자."}]}
+{"turns":[{"user":"기능이 너무 많이 들어가","assistant":"핵심 재미에 필요한 것부터 남기고 나머지는 나중으로 미뤄 보자."},{"user":"하나를 꼭 뺀다면?","assistant":"자주 쓰지 않으면서 구현 시간이 긴 기능을 먼저 후보로 생각해 봐."}]}
+{"turns":[{"user":"내 의견을 다시 정리해줘","assistant":"지금까지 이야기한 요점을 짧게 묶어 볼게."},{"user":"결론도 따로 써줘","assistant":"좋아. 근거와 결론을 구분해서 정리하겠다냥."}]}
+{"turns":[{"user":"오늘은 코딩 말고 쉬고 싶어","assistant":"그럴 때도 있지. 가볍게 즐길 수 있는 걸 해보자."},{"user":"뭐 하면 좋을까?","assistant":"좋아하는 음악을 듣거나 짧은 산책을 하는 건 어때?"}]}
+{"turns":[{"user":"명령어는 작동하는데 응답이 없어","assistant":"명령을 받은 뒤 어느 단계에서 멈추는지 로그로 확인해 보자."},{"user":"소켓 연결 대기 중이래","assistant":"서버 프로세스와 소켓 경로가 일치하는지 확인해야 해."}]}
+{"turns":[{"user":"The search box is slow","assistant":"Check whether each keypress triggers an expensive operation."},{"user":"It updates on every letter","assistant":"Try debouncing the search so it runs after a short pause."}]}
+{"turns":[{"user":"My textures look stretched","assistant":"Check the aspect ratio and scaling mode of the texture."},{"user":"The object is not square","assistant":"Try a mapping method that preserves the intended proportions."}]}
+{"turns":[{"user":"I want to design a boss","assistant":"Start with a clear attack pattern that the player can learn."},{"user":"How do I make it challenging?","assistant":"Add variations after players can recognize and react to the basic pattern."}]}
+{"turns":[{"user":"The new version broke my save file","assistant":"Keep a copy of the original save before testing a migration."},{"user":"What should the migration do?","assistant":"Convert the old fields to the new format and verify that values are preserved."}]}
+{"turns":[{"user":"My translation doesn't fit the button","assistant":"Shorten the label or let the interface adapt to longer text."},{"user":"Which is better?","assistant":"Prefer flexible layouts so future translations are not forced into awkward abbreviations."}]}
+{"turns":[{"user":"That suggestion isn't useful here","assistant":"Thanks for pointing it out. What limitation did I miss?"},{"user":"It has to run offline","assistant":"Then let's focus on local processing and remove network dependencies."}]}
+{"turns":[{"user":"Could you help me plan a test?","assistant":"What feature are you trying to verify?"},{"user":"A level restart button","assistant":"Test restarting during gameplay, after death, and from the pause menu."}]}
+{"turns":[{"user":"I don't have much time today","assistant":"Pick one small task that you can finish in your available time."},{"user":"I only have twenty minutes","assistant":"A short bug fix or a focused test is a reasonable goal."}]}
+{"turns":[{"user":"I want to build my own AI","assistant":"Start by choosing a manageable task and collecting reliable examples."},{"user":"Should I use a huge model immediately?","assistant":"Not necessarily. A small baseline helps you test data and training before scaling up."}]}
+{"turns":[{"user":"How do I know the model improved?","assistant":"Compare it against a fixed baseline on examples it never trained on."},{"user":"What if only the training loss improves?","assistant":"That suggests learning the training data, not necessarily better generalization."}]}
