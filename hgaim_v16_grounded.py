@@ -22,7 +22,7 @@ GAME_ALIASES = {
     "Minecraft": (r"마인크래프트", r"\bminecraft\b"),
     "Roblox": (r"로블록스", r"\broblox\b"),
     "ADOFAI": (r"얼불춤", r"\badofai\b", r"a dance of fire and ice"),
-    "Gunsaw": (r"\bgunsaw\b"),
+    "Gunsaw": (r"\bgunsaw\b",),
     "Changed": (r"\bchanged\b", r"\bpuro\b", r"\bdr\.\s*k\b"),
     "DevilConnection": (r"\bdevil\s*connection\b",),
     "Terraria": (r"테라리아", r"\bterraria\b"),
