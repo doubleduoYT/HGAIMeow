@@ -1,0 +1,97 @@
+name: HGAIM v16 Offline Factuality Fix and Regression Gate
+
+on:
+  push:
+    branches: [feature/hgaim-v16-grounded-quality-fix]
+    paths:
+      - hgaim_v16_grounded.py
+      - hgaim_v16_client.py
+      - hgaim_v14_client.py
+      - nyang_style_v14.py
+      - evaluate_quality_gate_v16.py
+      - test_v16_grounded.py
+      - .github/workflows/test_v16_grounded.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: hgaim-v16-grounded-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile independent factuality and client modules
+        run: |
+          python -m py_compile hgaim_v16_grounded.py hgaim_v16_client.py hgaim_v15_client.py hgaim_v14_client.py nyang_style_v14.py evaluate_quality_gate_v16.py test_v16_grounded.py
+
+      - name: Test offline factuality and nyang speech without starting any model
+        run: |
+          python -m unittest -v test_v14_style test_v16_grounded
+
+      - name: Detect previous neural factuality regression without approving bad model
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p previous
+          gh run download 38395424357 --repo "${{ github.repository }}" --name hgaim-v15-qwen3-bilingual-1 --dir previous
+          cp previous/V15_BASE_GENERATION.json .
+          cp previous/V15_TUNED_GENERATION.json .
+          python evaluate_quality_gate_v16.py
+          python - <<'PY'
+          import json
+          r=json.load(open("V16_QUALITY_GATE.json"))
+          assert r["questions_match"],r
+          assert r["automatic_promote"] is False,r
+          assert r["ready_for_human_review"] is False,r
+          assert r["candidate_heuristic_hits"] < r["baseline_heuristic_hits"],r
+          print("PASS: regression recognized, unsafe v15 model NOT promoted")
+          PY
+
+      - name: Build standalone offline bilingual demo results
+        run: |
+          python - <<'PY'
+          import json
+          from hgaim_v16_client import answer
+          questions=[
+              "C:U 문서에 등장하는 OSPREY 장치는 어떤 물체를 옮기려는 목적으로 설계됐니?",
+              "SAW-03의 털 색과 외형은 뭐야?",
+              "C:U 노란 피의 방사선 회복 능력은?",
+              "Gunsaw 개발자 누구야?",
+              "Who developed Gunsaw?",
+              "로블록스 프로그래밍 언어 뭐야?",
+              "What scripting language is used in Roblox?",
+              "얼불춤에서 두 행성과 박자는 어떻게 연결돼?",
+              "Changed 속 Puro는 누구야?",
+              "DevilConnection 공식 설정을 알려줘.",
+              "Gunsaw 출시일 언제야?"
+          ]
+          rows=[{"question":q,**answer(q,metadata=True,url="http://127.0.0.1:1")} for q in questions]
+          assert len(rows)==11
+          assert sum(r["route"]=="source" for r in rows)>=9,rows
+          assert rows[-1]["route"]=="abstain",rows[-1]
+          with open("V16_GROUNDED_DEMO.json","w",encoding="utf8") as o:
+              json.dump({"note":"Offline answer correctness follows reviewed source entries; not neural-model accuracy","records":rows},o,ensure_ascii=False,indent=2)
+          print(json.dumps(rows,ensure_ascii=False,indent=2))
+          PY
+
+      - name: Upload source-based factuality demo and neural regression gate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hgaim-v16-factuality-hotfix-${{ github.run_number }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            V16_GROUNDED_DEMO.json
+            V16_QUALITY_GATE.json
