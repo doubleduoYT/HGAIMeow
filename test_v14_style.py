@@ -43,8 +43,8 @@ class NyangTests(unittest.TestCase):
         original = "코드를 확인해.\n```python\nprint('hi')\n```\n다시 실행해."
         fixed = nyangify(original, "ko")
         self.assertIn("```python\nprint('hi')\n```", fixed)
-        self.assertTrue(fixed.endswith("다시 실행해냥."))
-        self.assertIn("코드를 확인해냥.", fixed)
+        self.assertTrue(fixed.endswith("다시 실행한다냥."))
+        self.assertIn("코드를 확인한다냥.", fixed)
 
     def test_english(self):
         self.assertEqual(nyangify("The answer is four.", "en"), "The answer is four, meow.")
