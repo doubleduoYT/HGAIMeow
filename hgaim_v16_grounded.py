@@ -110,6 +110,13 @@ def find_fact(question: str, *, facts_path: str = "game_facts_v13.json"):
         r"성우|목소리|더빙|voice\s+actor|voice\s+of|발매일|출시일|release\s+date|price|가격|비용|"
         r"레벨\s*에디터.{0,18}(?:누가|만들|제작자|개발자)|level\s+editor.{0,28}(?:who|made|creator|developer)",
         question, re.I)
+    # Mentioning a level editor is NOT evidence of who created that editor.
+    editor_authorship = (
+        bool(re.search(r"레벨\\s*에디터|level\\s+editor", question, re.I)) and
+        bool(re.search(r"누가|만들|제작자|개발자|who|made|created|developer|creator", question, re.I))
+    )
+    if editor_authorship:
+        return None
     for game,identifier,subject,intent in INTENT_RULES:
         if excluded or game not in games or not re.search(subject,question,re.I) or not re.search(intent,question,re.I):
             continue
