@@ -226,9 +226,16 @@ def neural_generate(model,tok,device,cfg,user,context=None,history=None,temperat
  if model is None:return None
  prompt=f"<|system|> {system_text_for_question(user)}<|end|>\n"+"".join(f"<|user|> {u}\n<|assistant|> {a}<|end|>\n" for u,a in (history or [])[-2:])+f"<|user|> {user}\n"+(f"<|context|> {context}<|end|>\n" if context else "")+"<|assistant|> ";idx=torch.tensor([tok.encode(prompt)[-cfg["block_size"]:]],device=device);gen=[];rg=None
  if seed is not None:rg=torch.Generator(device=device);rg.manual_seed(int(seed))
+ if is_english_question(user):
+  foreign=torch.tensor([bool(re.search(r"[가-힣]",word)) for word in tok.vocab],device=device,dtype=torch.bool)
+ else:
+  user_latin={w.casefold() for w in re.findall(r"[A-Za-z][A-Za-z0-9_+#.-]*",user)}
+  foreign=torch.tensor([bool(re.search(r"[A-Za-z]",word)) and word.casefold() not in user_latin and word not in SPECIAL for word in tok.vocab],device=device,dtype=torch.bool)
+ foreign[tok.end]=False
  for _ in range(max_new_tokens):
   z=model(idx[:,-cfg["block_size"]:])[0][:,-1].float()
   for i in set(gen[-64:]):v=z[0,i];z[0,i]=torch.where(v<0,v*repetition_penalty,v/repetition_penalty)
+  z[0,foreign]-=2.0
   z/=max(.05,float(temperature))
   if top_k:
    v,_=torch.topk(z,min(top_k,z.size(-1)));z[z<v[:,-1,None]]=-float("inf")
