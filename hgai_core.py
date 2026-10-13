@@ -16,6 +16,8 @@ def is_english_question(q):
 def system_text_for_question(q):
  return SYSTEM_TEXT_EN if is_english_question(q) else SYSTEM_TEXT
 FALLBACK_RESPONSE="잘 모르겠다냥 새로 배우고 싶다냥 :3"
+FALLBACK_RESPONSE_EN="I can't answer that reliably yet, meow. Could you clarify what you need?"
+def fallback_for_question(question):return FALLBACK_RESPONSE_EN if is_english_question(question) else FALLBACK_RESPONSE
 SPECIAL=["<pad>","<unk>","<|system|>","<|user|>","<|context|>","<|assistant|>","<|end|>"]
 PRESETS={
  "main":{"block_size":256,"batch_size":4,"n_embd":224,"n_head":7,"n_layer":5,"ffn_hidden":640,"dropout":.08,"max_vocab":16000},
@@ -226,9 +228,21 @@ def neural_generate(model,tok,device,cfg,user,context=None,history=None,temperat
  if model is None:return None
  prompt=f"<|system|> {system_text_for_question(user)}<|end|>\n"+"".join(f"<|user|> {u}\n<|assistant|> {a}<|end|>\n" for u,a in (history or [])[-2:])+f"<|user|> {user}\n"+(f"<|context|> {context}<|end|>\n" if context else "")+"<|assistant|> ";idx=torch.tensor([tok.encode(prompt)[-cfg["block_size"]:]],device=device);gen=[];rg=None
  if seed is not None:rg=torch.Generator(device=device);rg.manual_seed(int(seed))
+ if is_english_question(user):
+  foreign=torch.tensor([bool(re.search(r"[가-힣]",word)) for word in tok.vocab],device=device,dtype=torch.bool)
+  single_letter=torch.tensor([bool(re.fullmatch(r"[A-Za-z]",word)) and word not in {"I","a","A"} for word in tok.vocab],device=device,dtype=torch.bool)
+ else:
+  user_latin={w.casefold() for w in re.findall(r"[A-Za-z][A-Za-z0-9_+#.-]*",user)}
+  foreign=torch.tensor([bool(re.search(r"[A-Za-z]",word)) and word.casefold() not in user_latin and word not in SPECIAL for word in tok.vocab],device=device,dtype=torch.bool)
+ foreign[tok.end]=False
  for _ in range(max_new_tokens):
   z=model(idx[:,-cfg["block_size"]:])[0][:,-1].float()
   for i in set(gen[-64:]):v=z[0,i];z[0,i]=torch.where(v<0,v*repetition_penalty,v/repetition_penalty)
+  z[0,[tok.pad,tok.unk]+[tok.stoi[k] for k in SPECIAL if k not in {"<|end|>","<pad>","<unk>"}]]=-float("inf")
+  if is_english_question(user):
+   z[0,foreign | single_letter]=-float("inf")
+  else:
+   z[0,foreign]-=1.4
   z/=max(.05,float(temperature))
   if top_k:
    v,_=torch.topk(z,min(top_k,z.size(-1)));z[z<v[:,-1,None]]=-float("inf")
@@ -262,7 +276,7 @@ class HGAIEngine:
   q=clean_text(user)
   if not q:return "냥? 뭔가 말해줘라냥 :3"
   if mode=="raw-neural":
-   g=neural_generate(self.model,self.tok,self.device,self.cfg,q,None,self.history,temperature,top_k,top_p,max_new_tokens) if self.model else None;a=fix_nyang(g) if quality_ok(g) else FALLBACK_RESPONSE;self._save(q,a);return a
+   g=neural_generate(self.model,self.tok,self.device,self.cfg,q,None,self.history,temperature,top_k,top_p,max_new_tokens) if self.model else None;a=fix_nyang(g) if quality_ok(g) else fallback_for_question(q);self._save(q,a);return a
   for fn in (self.remember_rule,calculator_reply,curated_direct_reply):
    a=fn(q)
    if a:self._save(q,a);return a
@@ -282,5 +296,5 @@ class HGAIEngine:
   if self.model and (mode=="neural" or (mode=="hybrid" and self.neural_ready)):
    g=neural_generate(self.model,self.tok,self.device,self.cfg,q,None,self.history,temperature,top_k,top_p,max_new_tokens)
    if quality_ok(g):self._save(q,g);return fix_nyang(g)
-  a=FALLBACK_RESPONSE;self._save(q,a);return a
+  a=fallback_for_question(q);self._save(q,a);return a
  def model_info(self):return {"version":"hgai-v10","preset":self.preset,"runtime_pairs":len(self.pairs),"model_loaded":self.model is not None,"params":count_params(self.model),"neural_ready":self.neural_ready,"checkpoint":self.checkpoint_meta,"device":self.device,"external_model_required":False}

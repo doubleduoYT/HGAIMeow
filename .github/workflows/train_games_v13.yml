@@ -1,0 +1,152 @@
+name: HGAIM v13 Game Knowledge Neural Training
+
+on:
+  push:
+    branches: [feature/hgaim-v13-game-knowledge]
+    paths:
+      - build_games_v13.py
+      - game_facts_v13.json
+      - train_neural_v13.py
+      - evaluate_generation_v12.py
+      - .github/workflows/train_games_v13.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: game-neural-v13-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install CPU training dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt wordfreq
+
+      - name: Check source and trainer syntax
+        run: |
+          python -m py_compile build_games_v13.py train_neural_v13.py hgai_core.py train_v10_quality.py train_neural_v12.py evaluate_generation_v12.py
+          python build_dataset.py --max-variants 12
+
+      - name: Get game localization source material
+        run: |
+          mkdir -p locales
+          curl --fail --location --retry 3 --silent --show-error \
+            https://raw.githubusercontent.com/Kedr2806/scavgame-locale/main/EN.json \
+            -o locales/EN.json
+          curl --fail --location --retry 3 --silent --show-error \
+            https://raw.githubusercontent.com/Kedr2806/scavgame-locale/main/ko-KR.json \
+            -o locales/ko-KR.json
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          en = Path("locales/EN.json").read_bytes()
+          ko = Path("locales/ko-KR.json").read_bytes()
+          expected = "3d804e7491a5fc961d6c0a9d3d63ce168ada1d70d0716b30dcb738a6e9436aae"
+          assert hashlib.sha256(en).hexdigest() == expected, "Upstream English source changed: this run needs review"
+          print("English source matches exact uploaded EN.json.txt SHA256")
+          print("Korean input: current publicly available ko-KR.json; user-uploaded older ko-KR(2).json differs")
+          print("Korean source version:",json.loads(ko).get("version","unspecified"))
+          print("Korean source SHA256:", hashlib.sha256(ko).hexdigest())
+          PY
+
+      - name: Build 2-language source-grounded Q&A
+        run: |
+          python build_games_v13.py --en locales/EN.json --ko locales/ko-KR.json --facts game_facts_v13.json --output v13_game_data
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("v13_game_data/REPORT_v13.json").read_text(encoding="utf-8"))
+          assert r["train_qa"] >= 4000, r
+          assert r["heldout_qa"] >= 100, r
+          assert r["by_language_train"]["ko"] >= 1000
+          assert r["by_language_train"]["en"] >= 1000
+          print("PASS: source-grounded QA",r["train_qa"],"heldout",r["heldout_qa"])
+          PY
+
+      - name: Download trained HGAIM v12 initializer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p previous
+          gh run download 38371138600 --repo "${{ github.repository }}" --name hgaim-v12-generative-candidate-1 --dir previous
+          cp previous/hgai_model_v12.pth ./hgai_model_v12.pth
+          test -s hgai_model_v12.pth
+
+      - name: Model and vocabulary growth smoke test
+        run: |
+          python train_neural_v13.py --steps 2 --eval-every 1 --grad-accum 1 --model-file /tmp/hgai_v13_smoke.pth
+          python - <<'PY'
+          import json
+          from hgai_core import checkpoint_load
+          c=checkpoint_load("/tmp/hgai_v13_smoke.pth")
+          assert c and c["version"] == "hgai-v10"
+          assert c["preset"] == "main"
+          assert c["config"]["block_size"] >= 384
+          assert len(c["vocab"]) > 2000
+          assert "selection_dialogue_loss" in c
+          print("PASS: model checkpoint and context-size extension compatible")
+          PY
+
+      - name: Evaluate v12 model with v13 benchmark
+        run: |
+          python evaluate_generation_v12.py --model-file hgai_model_v12.pth --report V13_BASELINE_GENERATION.json
+
+      - name: Continue bilingual game-specialist neural training
+        run: |
+          python train_neural_v13.py --steps 3600 --eval-every 300 --grad-accum 2 --threads 2 --lr 0.00002 --model-file hgai_model_v13.pth
+
+      - name: Independent neural generation and general regression
+        run: |
+          python evaluate_generation_v12.py --model-file hgai_model_v13.pth --report V13_GENERATION_EVAL.json
+          python evaluate_neural_v11.py --model-file hgai_model_v13.pth --report V13_DIALOGUE_EVAL.json
+          python evaluate_neural_v10.py --model-file hgai_model_v13.pth --min-pass 0 --report V13_KO_RAW.json
+          python evaluate_bilingual_v10.py --model-file hgai_model_v13.pth --mode raw-neural --min-pass 0 --report V13_EN_RAW.json
+
+      - name: Print full model diagnostics without automatic deployment
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("v13_game_data/REPORT_v13.json").read_text(encoding="utf8"))
+          t=json.loads(Path("hgai_model_v13.training.json").read_text(encoding="utf8"))
+          b=json.loads(Path("V13_BASELINE_GENERATION.json").read_text(encoding="utf8"))
+          n=json.loads(Path("V13_GENERATION_EVAL.json").read_text(encoding="utf8"))
+          print("Game QA examples:",r["train_qa"],"heldout:",r["heldout_qa"])
+          print("New model vocab:",t["new_vocab_size"],"old:",t["original_vocab_size"])
+          print("Selected step:",t["selected_step"])
+          print("Held-out token loss:",t["baseline_dialogue_loss"],"->",t["chosen_dialogue_loss"])
+          print("Fixed fallback count:",b["fallback_count"],"->",n["fallback_count"])
+          print("English lexicality:",b["english_lexical_ratio"],"->",n["english_lexical_ratio"])
+          print("NOT A FLUENCY TEST: human review required. No auto deployment.")
+          PY
+
+      - name: Upload new model, game QA and full evaluation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hgaim-v13-bilingual-game-expert-${{ github.run_number }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: |
+            hgai_model_v13.pth
+            hgai_model_v13.training.json
+            v13_game_data/REPORT_v13.json
+            v13_game_data/game_qa_v13_train.jsonl
+            v13_game_data/game_qa_v13_holdout.jsonl
+            V13_BASELINE_GENERATION.json
+            V13_GENERATION_EVAL.json
+            V13_DIALOGUE_EVAL.json
+            V13_KO_RAW.json
+            V13_EN_RAW.json
