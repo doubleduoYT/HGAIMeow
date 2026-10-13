@@ -1,0 +1,1037 @@
+[
+  {
+    "game": "Minecraft",
+    "id": "genre",
+    "q_en": "What kind of game is Minecraft?",
+    "a_en": "Minecraft is a sandbox game about exploring block-based worlds, mining resources, crafting and building.",
+    "q_ko": "마인크래프트는 어떤 게임이야?",
+    "a_ko": "마인크래프트는 블록으로 이뤄진 세계를 탐험하고 자원을 모아 제작하거나 건축하는 샌드박스 게임이야.",
+    "source": "https://www.minecraft.net/"
+  },
+  {
+    "game": "Minecraft",
+    "id": "survival",
+    "q_en": "What do you do in Minecraft Survival mode?",
+    "a_en": "In Survival mode, you collect resources, craft tools, manage health and hunger, and survive hostile mobs.",
+    "q_ko": "마인크래프트 서바이벌에서는 뭘 해?",
+    "a_ko": "서바이벌 모드에서는 자원을 채집하고 도구를 만들며 체력과 허기를 관리하고 적대적인 몹을 피해 살아남아야 해.",
+    "source": "https://www.minecraft.net/"
+  },
+  {
+    "game": "Minecraft",
+    "id": "creative",
+    "q_en": "What is Creative mode in Minecraft?",
+    "a_en": "Creative mode lets players build freely with a broad inventory of blocks and usually without survival limitations.",
+    "q_ko": "마인크래프트 크리에이티브 모드는 뭐야?",
+    "a_ko": "크리에이티브 모드에서는 생존 제한 없이 다양한 블록을 활용해 자유롭게 건축할 수 있어.",
+    "source": "https://www.minecraft.net/"
+  },
+  {
+    "game": "Minecraft",
+    "id": "redstone",
+    "q_en": "What is redstone used for in Minecraft?",
+    "a_en": "Redstone components can power circuits and build automated doors, traps, farms, and logic systems.",
+    "q_ko": "마인크래프트 레드스톤은 어디에 써?",
+    "a_ko": "레드스톤은 신호와 회로를 구성해 자동문, 농장, 함정 같은 장치를 만드는 데 사용해.",
+    "source": "https://www.minecraft.net/"
+  },
+  {
+    "game": "Minecraft",
+    "id": "mods",
+    "q_en": "Can Minecraft be modified?",
+    "a_en": "Yes. Java Edition supports a large modding ecosystem; version and mod loader compatibility matter.",
+    "q_ko": "마인크래프트 모드를 만들 수 있어?",
+    "a_ko": "자바 에디션에는 활발한 모딩 생태계가 있어. 게임 버전과 모드 로더의 호환성을 확인해야 해.",
+    "source": "https://www.minecraft.net/"
+  },
+  {
+    "game": "Roblox",
+    "id": "platform",
+    "q_en": "Is Roblox just one game?",
+    "a_en": "Roblox is a platform where users play and create many different experiences, not one fixed game.",
+    "q_ko": "로블록스는 하나의 게임이야?",
+    "a_ko": "로블록스는 하나의 고정된 게임이 아니라 이용자들이 여러 경험을 만들고 플레이하는 플랫폼이야.",
+    "source": "https://create.roblox.com/docs/experiences"
+  },
+  {
+    "game": "Roblox",
+    "id": "studio",
+    "q_en": "What is Roblox Studio?",
+    "a_en": "Roblox Studio is the creation tool used to build and publish Roblox experiences.",
+    "q_ko": "Roblox Studio는 뭐야?",
+    "a_ko": "Roblox Studio는 로블록스 경험을 제작하고 게시하는 개발 도구야.",
+    "source": "https://create.roblox.com/docs/experiences"
+  },
+  {
+    "game": "Roblox",
+    "id": "scripting",
+    "q_en": "What language is used for Roblox scripting?",
+    "a_en": "Roblox scripting uses Luau, a language derived from Lua.",
+    "q_ko": "로블록스 스크립트는 무슨 언어야?",
+    "a_ko": "로블록스에서는 Lua에서 파생된 Luau 언어로 스크립트를 작성해.",
+    "source": "https://create.roblox.com/docs/experiences"
+  },
+  {
+    "game": "Roblox",
+    "id": "multiplayer",
+    "q_en": "Does Roblox support multiplayer?",
+    "a_en": "Many Roblox experiences are multiplayer; the actual player count and gameplay depend on each experience.",
+    "q_ko": "로블록스에서 멀티플레이가 가능해?",
+    "a_ko": "많은 로블록스 경험이 멀티플레이를 지원하지만 인원과 규칙은 경험마다 달라.",
+    "source": "https://create.roblox.com/docs/experiences"
+  },
+  {
+    "game": "Roblox",
+    "id": "beginner",
+    "q_en": "How should a beginner start making a Roblox game?",
+    "a_en": "Start with a Studio template, build one simple mechanic, then test and publish a small prototype.",
+    "q_ko": "로블록스 게임 개발을 처음 하면 뭐부터 해?",
+    "a_ko": "Studio 템플릿에서 출발해 간단한 기능 하나를 구현하고 테스트한 뒤 작은 프로토타입을 배포해 봐.",
+    "source": "https://create.roblox.com/docs/experiences"
+  },
+  {
+    "game": "ADOFAI",
+    "id": "genre",
+    "q_en": "What is ADOFAI?",
+    "a_en": "A Dance of Fire and Ice, or ADOFAI, is a strict one-button rhythm game by 7th Beat Games.",
+    "q_ko": "얼불춤은 어떤 게임이야?",
+    "a_ko": "얼불춤으로 불리는 A Dance of Fire and Ice는 7th Beat Games가 만든 원 버튼 리듬 게임이야.",
+    "source": "https://7thbe.at/"
+  },
+  {
+    "game": "ADOFAI",
+    "id": "mechanic",
+    "q_en": "How do you play A Dance of Fire and Ice?",
+    "a_en": "Press to the beat as two orbiting planets follow a winding path; each angle corresponds to rhythm.",
+    "q_ko": "ADOFAI 조작 방식은 어때?",
+    "a_ko": "서로 공전하는 두 행성이 구불구불한 길을 따라가도록 박자에 맞춰 버튼을 누르는 방식이야.",
+    "source": "https://7thbe.at/"
+  },
+  {
+    "game": "ADOFAI",
+    "id": "difficulty",
+    "q_en": "Why is ADOFAI challenging?",
+    "a_en": "Its strict timing and patterns require rhythm reading and steady timing rather than random fast tapping.",
+    "q_ko": "얼불춤은 왜 어려워?",
+    "a_ko": "판정이 엄격하고 길 모양에 따라 리듬 패턴이 달라져서 박자를 읽고 정확하게 눌러야 하기 때문이야.",
+    "source": "https://7thbe.at/"
+  },
+  {
+    "game": "ADOFAI",
+    "id": "editor",
+    "q_en": "Can people make custom levels for ADOFAI?",
+    "a_en": "The game has a level editor and a community that creates custom rhythm levels.",
+    "q_ko": "얼불춤에는 커스텀 레벨이 있어?",
+    "a_ko": "레벨 에디터를 이용해 커스텀 리듬 레벨을 제작하는 커뮤니티가 있어.",
+    "source": "https://7thbe.at/"
+  },
+  {
+    "game": "Gunsaw",
+    "id": "description",
+    "q_en": "What is Gunsaw?",
+    "a_en": "Gunsaw is a 2D physics-based shooter made by Orsoniks, featuring anthropomorphic animal characters.",
+    "q_ko": "Gunsaw는 어떤 게임이야?",
+    "a_ko": "Gunsaw는 Orsoniks가 만든 2D 물리 기반 슈팅 게임으로, 수인 캐릭터들이 등장해.",
+    "source": "https://orsonik.itch.io/gunsaw-demo"
+  },
+  {
+    "game": "Gunsaw",
+    "id": "developer",
+    "q_en": "Who developed Gunsaw?",
+    "a_en": "Gunsaw was developed by Orsoniks.",
+    "q_ko": "Gunsaw 개발자는 누구야?",
+    "a_ko": "Gunsaw를 개발한 사람은 Orsoniks야.",
+    "source": "https://orsonik.itch.io/gunsaw-demo"
+  },
+  {
+    "game": "Gunsaw",
+    "id": "editor",
+    "q_en": "Does Gunsaw have a level editor?",
+    "a_en": "Yes. The publicly released demo includes a level editor, though the developer describes parts as unpolished.",
+    "q_ko": "Gunsaw에 레벨 에디터가 있어?",
+    "a_ko": "응. 공개된 데모에는 레벨 에디터가 들어 있지만 일부 기능은 다듬어지지 않았다고 안내돼 있어.",
+    "source": "https://orsonik.itch.io/gunsaw-demo"
+  },
+  {
+    "game": "Gunsaw",
+    "id": "development",
+    "q_en": "Is Gunsaw still being actively developed?",
+    "a_en": "The author describes Gunsaw development as on indefinite hiatus, and the demo page labels it canceled.",
+    "q_ko": "Gunsaw는 아직 개발 중이야?",
+    "a_ko": "개발자는 무기한 중단 상태라고 설명했고 데모 페이지에는 취소됨으로 표기돼 있어.",
+    "source": "https://orsonik.itch.io/gunsaw-demo"
+  },
+  {
+    "game": "Gunsaw",
+    "id": "relation",
+    "q_en": "How is Gunsaw related to Casualties: Unknown?",
+    "a_en": "Fan-maintained C:U wiki describes shared physics, movement ideas, and other assets between Gunsaw and C:U; check primary sources for precise lore claims.",
+    "q_ko": "Gunsaw와 Casualties: Unknown은 무슨 관계야?",
+    "a_ko": "팬 위키에 따르면 두 게임은 물리·이동 방식 등 여러 요소를 공유해. 세부 세계관 설정은 출처별로 확인하는 게 좋아.",
+    "source": "https://orsonik.itch.io/gunsaw-demo"
+  },
+  {
+    "game": "Changed",
+    "id": "description",
+    "q_en": "What is Changed?",
+    "a_en": "Changed is a 2D RPG Maker adventure by DragonSnow involving escape from a mysterious laboratory and transformation hazards.",
+    "q_ko": "Changed는 어떤 게임이야?",
+    "a_ko": "Changed는 DragonSnow가 만든 2D RPG Maker 어드벤처 게임으로, 수수께끼의 연구소 탈출과 변신 위험이 주요 요소야.",
+    "source": "https://changed.wiki.gg/"
+  },
+  {
+    "game": "Changed",
+    "id": "protagonist",
+    "q_en": "Who is the protagonist of Changed?",
+    "a_en": "The protagonist is Colin, a human who wakes in a mysterious laboratory.",
+    "q_ko": "Changed의 주인공은 누구야?",
+    "a_ko": "주인공은 의문의 연구소에서 깨어난 인간 콜린(Colin)이야.",
+    "source": "https://changed.wiki.gg/"
+  },
+  {
+    "game": "Changed",
+    "id": "puro",
+    "q_en": "Who is Puro in Changed?",
+    "a_en": "Puro is one of the central characters Colin meets during the story.",
+    "q_ko": "Changed의 Puro는 누구야?",
+    "a_ko": "Puro는 콜린이 이야기 속에서 만나는 핵심 캐릭터 중 하나야.",
+    "source": "https://changed.wiki.gg/"
+  },
+  {
+    "game": "Changed",
+    "id": "drk",
+    "q_en": "Who is Dr. K in Changed?",
+    "a_en": "Dr. K is a major figure involved in the laboratory's story and its dangers.",
+    "q_ko": "Changed에 나오는 Dr. K는 누구야?",
+    "a_ko": "Dr. K는 연구소의 이야기와 위험 요소에 깊이 관련된 주요 인물이야.",
+    "source": "https://changed.wiki.gg/"
+  },
+  {
+    "game": "Changed",
+    "id": "puzzles",
+    "q_en": "Does Changed have puzzles?",
+    "a_en": "Yes. Players explore rooms and solve environmental puzzles while avoiding transformation threats.",
+    "q_ko": "Changed에는 퍼즐이 있어?",
+    "a_ko": "응. 방을 탐색하고 환경 퍼즐을 해결하며 변신을 일으키는 위협을 피해야 해.",
+    "source": "https://changed.wiki.gg/"
+  },
+  {
+    "game": "DevilConnection",
+    "id": "identity",
+    "q_en": "What is DevilConnection?",
+    "a_en": "I recognize the title DevilConnection from the question, but I do not have a verified game description or developer. A source link would help identify it accurately.",
+    "q_ko": "DevilConnection은 어떤 게임이야?",
+    "a_ko": "DevilConnection이라는 제목은 받았지만 개발자나 게임 내용에 대해 검증된 자료는 없어. 정확한 게임 페이지가 있으면 그걸 기준으로 설명할 수 있어.",
+    "source": "unverified:title-only"
+  },
+  {
+    "game": "DevilConnection",
+    "id": "source",
+    "q_en": "Can you explain DevilConnection's mechanics?",
+    "a_en": "I cannot reliably describe DevilConnection's mechanics without identifying the correct game. Please share an official page or gameplay description.",
+    "q_ko": "DevilConnection의 시스템을 설명해줘.",
+    "a_ko": "동명이작품 가능성을 배제할 정보가 없어 DevilConnection의 시스템을 확정할 수 없어. 게임 소개나 공식 링크를 알려주면 정확히 정리할 수 있어.",
+    "source": "unverified:title-only"
+  },
+  {
+    "game": "Terraria",
+    "id": "genre",
+    "q_en": "What is Terraria?",
+    "a_en": "Terraria is a 2D action-adventure sandbox with mining, crafting, building, exploration, and boss battles.",
+    "q_ko": "테라리아는 어떤 게임이야?",
+    "a_ko": "테라리아는 채굴·제작·건축·탐험·보스전을 즐기는 2D 액션 어드벤처 샌드박스 게임이야.",
+    "source": "https://terraria.org/"
+  },
+  {
+    "game": "Terraria",
+    "id": "progress",
+    "q_en": "How do you progress in Terraria?",
+    "a_en": "Explore biomes, gather equipment and materials, then defeat increasingly difficult bosses to unlock more content.",
+    "q_ko": "테라리아에서 진행은 어떻게 해?",
+    "a_ko": "생물군계를 탐험해 장비와 재료를 모으고 점점 강한 보스를 처치하면서 새로운 콘텐츠를 열어가는 방식이야.",
+    "source": "https://terraria.org/"
+  },
+  {
+    "game": "Terraria",
+    "id": "comparison",
+    "q_en": "How is Terraria different from Minecraft?",
+    "a_en": "Terraria is 2D and emphasizes equipment progression and bosses, whereas Minecraft is a 3D block sandbox emphasizing open-ended building and exploration.",
+    "q_ko": "테라리아와 마인크래프트는 뭐가 달라?",
+    "a_ko": "테라리아는 2D에서 장비 성장과 보스 공략의 비중이 크고, 마인크래프트는 3D 블록 세계의 자유로운 건축과 탐험이 중심이야.",
+    "source": "https://terraria.org/"
+  },
+  {
+    "game": "Stardew Valley",
+    "id": "genre",
+    "q_en": "What is Stardew Valley?",
+    "a_en": "Stardew Valley is a farming life-simulation RPG where you cultivate a farm, meet villagers, fish, mine, and build relationships.",
+    "q_ko": "스타듀 밸리는 어떤 게임이야?",
+    "a_ko": "스타듀 밸리는 농장을 가꾸고 주민들과 교류하며 낚시·채굴·관계를 즐기는 농장 생활 시뮬레이션 RPG야.",
+    "source": "https://www.stardewvalley.net/"
+  },
+  {
+    "game": "Stardew Valley",
+    "id": "season",
+    "q_en": "Why do seasons matter in Stardew Valley?",
+    "a_en": "The season changes which crops grow and can affect foraging, fishing, and events.",
+    "q_ko": "스타듀 밸리에서 계절이 왜 중요해?",
+    "a_ko": "계절에 따라 재배 가능한 작물과 채집·낚시·행사 등이 달라지기 때문이야.",
+    "source": "https://www.stardewvalley.net/"
+  },
+  {
+    "game": "Stardew Valley",
+    "id": "multiplayer",
+    "q_en": "Can you play Stardew Valley together?",
+    "a_en": "Stardew Valley supports cooperative multiplayer on supported platforms; exact features vary by edition.",
+    "q_ko": "스타듀 밸리는 같이 플레이할 수 있어?",
+    "a_ko": "지원하는 플랫폼에서는 협동 멀티플레이가 가능하지만 세부 기능은 버전마다 다를 수 있어.",
+    "source": "https://www.stardewvalley.net/"
+  },
+  {
+    "game": "Undertale",
+    "id": "story",
+    "q_en": "What is Undertale?",
+    "a_en": "Undertale is an RPG by Toby Fox where encounters can be resolved without killing enemies and player choices affect the story.",
+    "q_ko": "언더테일은 어떤 게임이야?",
+    "a_ko": "언더테일은 Toby Fox의 RPG로, 적을 죽이지 않고도 만남을 해결할 수 있으며 선택이 이야기에 영향을 줘.",
+    "source": "https://undertale.com/"
+  },
+  {
+    "game": "Undertale",
+    "id": "mercy",
+    "q_en": "What is the MERCY option in Undertale?",
+    "a_en": "MERCY is part of the battle interface and can spare opponents when conditions are met.",
+    "q_ko": "언더테일의 자비(MERCY)는 뭐야?",
+    "a_ko": "전투에서 조건을 만족하면 적을 살려 보낼 수 있는 선택지야.",
+    "source": "https://undertale.com/"
+  },
+  {
+    "game": "Undertale",
+    "id": "routes",
+    "q_en": "Does Undertale have different routes?",
+    "a_en": "Yes. Outcomes differ based on choices, including whether you spare or kill characters.",
+    "q_ko": "언더테일에는 여러 루트가 있어?",
+    "a_ko": "응. 등장인물을 살릴지 죽일지 등 플레이어의 선택에 따라 전개와 결말이 달라져.",
+    "source": "https://undertale.com/"
+  },
+  {
+    "game": "Deltarune",
+    "id": "identity",
+    "q_en": "What is Deltarune?",
+    "a_en": "Deltarune is a role-playing game by Toby Fox featuring Kris and a party-based battle system.",
+    "q_ko": "델타룬은 무슨 게임이야?",
+    "a_ko": "델타룬은 Toby Fox가 만든 RPG로, 크리스와 동료들이 등장하며 파티 기반 전투 시스템을 사용해.",
+    "source": "https://deltarune.com/"
+  },
+  {
+    "game": "Deltarune",
+    "id": "relation",
+    "q_en": "Is Deltarune a sequel to Undertale?",
+    "a_en": "Deltarune shares creative roots and motifs with Undertale but has its own setting and story.",
+    "q_ko": "델타룬은 언더테일의 직접적인 후속작이야?",
+    "a_ko": "델타룬은 언더테일과 제작자와 일부 요소를 공유하지만 별개의 설정과 이야기를 지닌 작품이야.",
+    "source": "https://deltarune.com/"
+  },
+  {
+    "game": "Deltarune",
+    "id": "combat",
+    "q_en": "How does combat in Deltarune work?",
+    "a_en": "Battles mix party commands with dodging bullet patterns, and many encounters have nonviolent options.",
+    "q_ko": "델타룬 전투는 어떤 방식이야?",
+    "a_ko": "파티 명령과 탄막 회피가 결합돼 있고, 여러 전투를 비폭력적으로 해결할 수도 있어.",
+    "source": "https://deltarune.com/"
+  },
+  {
+    "game": "Hollow Knight",
+    "id": "genre",
+    "q_en": "What is Hollow Knight?",
+    "a_en": "Hollow Knight is a 2D action-adventure metroidvania focused on exploring an interconnected underground kingdom.",
+    "q_ko": "할로우 나이트는 어떤 게임이야?",
+    "a_ko": "할로우 나이트는 서로 연결된 지하 왕국을 탐험하는 2D 액션 어드벤처 메트로배니아야.",
+    "source": "https://www.hollowknight.com/"
+  },
+  {
+    "game": "Hollow Knight",
+    "id": "combat",
+    "q_en": "What does Hollow Knight combat emphasize?",
+    "a_en": "Precise movement, timing, melee attacks, and learning enemy attack patterns are central.",
+    "q_ko": "할로우 나이트 전투의 특징은 뭐야?",
+    "a_ko": "정확한 이동·타이밍·근접 공격과 적 패턴 학습이 중요해.",
+    "source": "https://www.hollowknight.com/"
+  },
+  {
+    "game": "Hollow Knight",
+    "id": "progress",
+    "q_en": "How does exploration open up in Hollow Knight?",
+    "a_en": "New abilities unlock routes and previously unreachable areas in the connected world.",
+    "q_ko": "할로우 나이트는 새로운 지역을 어떻게 열어?",
+    "a_ko": "새로운 이동 능력을 얻으면 이전에 갈 수 없던 길과 지역을 탐험할 수 있어.",
+    "source": "https://www.hollowknight.com/"
+  },
+  {
+    "game": "Celeste",
+    "id": "genre",
+    "q_en": "What is Celeste?",
+    "a_en": "Celeste is a precision platformer about Madeline climbing a mountain and confronting personal challenges.",
+    "q_ko": "셀레스트는 어떤 게임이야?",
+    "a_ko": "셀레스트는 매들린이 산을 오르며 자신의 문제와 마주하는 정밀 플랫포머 게임이야.",
+    "source": "https://www.celestegame.com/"
+  },
+  {
+    "game": "Celeste",
+    "id": "dash",
+    "q_en": "What is the dash mechanic in Celeste?",
+    "a_en": "The dash lets Madeline move rapidly in a chosen direction, shaping platforming puzzles.",
+    "q_ko": "셀레스트의 대시는 뭐야?",
+    "a_ko": "선택한 방향으로 빠르게 이동하는 능력으로, 플랫폼 퍼즐의 핵심 조작이야.",
+    "source": "https://www.celestegame.com/"
+  },
+  {
+    "game": "Celeste",
+    "id": "difficulty",
+    "q_en": "What makes Celeste levels challenging?",
+    "a_en": "Levels test timing and movement precision through tightly designed obstacles.",
+    "q_ko": "셀레스트 스테이지가 어려운 이유는?",
+    "a_ko": "정교하게 배치된 장애물로 타이밍과 이동 정확도를 요구하기 때문이야.",
+    "source": "https://www.celestegame.com/"
+  },
+  {
+    "game": "Geometry Dash",
+    "id": "genre",
+    "q_en": "What is Geometry Dash?",
+    "a_en": "Geometry Dash is a rhythm-based platformer where players time jumps and movements through obstacle-filled levels.",
+    "q_ko": "지오메트리 대시는 어떤 게임이야?",
+    "a_ko": "지오메트리 대시는 장애물로 가득한 스테이지를 박자에 맞춰 점프하며 돌파하는 리듬 기반 플랫포머야.",
+    "source": "https://store.steampowered.com/app/322170/Geometry_Dash/"
+  },
+  {
+    "game": "Geometry Dash",
+    "id": "editor",
+    "q_en": "Does Geometry Dash have a level editor?",
+    "a_en": "Yes, creators can build and share custom levels.",
+    "q_ko": "지오메트리 대시에는 레벨 에디터가 있어?",
+    "a_ko": "응. 직접 커스텀 레벨을 만들고 공유할 수 있어.",
+    "source": "https://store.steampowered.com/app/322170/Geometry_Dash/"
+  },
+  {
+    "game": "Geometry Dash",
+    "id": "comparison",
+    "q_en": "Is Geometry Dash the same kind of rhythm game as ADOFAI?",
+    "a_en": "Both use rhythm, but ADOFAI follows orbital motion with one-button beat inputs while Geometry Dash focuses on obstacle navigation and movement modes.",
+    "q_ko": "지오메트리 대시와 얼불춤은 비슷해?",
+    "a_ko": "둘 다 리듬을 활용하지만 얼불춤은 공전하는 두 행성의 박자 입력, 지오메트리 대시는 장애물 회피와 이동 모드 중심이야.",
+    "source": "https://store.steampowered.com/app/322170/Geometry_Dash/"
+  },
+  {
+    "game": "Portal 2",
+    "id": "genre",
+    "q_en": "What is Portal 2?",
+    "a_en": "Portal 2 is a first-person puzzle game by Valve where linked portals let players move objects and themselves through space.",
+    "q_ko": "포탈 2는 어떤 게임이야?",
+    "a_ko": "포탈 2는 두 포탈을 연결해 자신과 물체의 이동 경로를 바꾸며 퍼즐을 푸는 Valve의 1인칭 퍼즐 게임이야.",
+    "source": "https://store.steampowered.com/app/620/Portal_2/"
+  },
+  {
+    "game": "Portal 2",
+    "id": "coop",
+    "q_en": "Does Portal 2 have cooperative puzzles?",
+    "a_en": "Yes, Portal 2 includes a cooperative campaign designed around two players solving puzzles together.",
+    "q_ko": "포탈 2에 협동 모드가 있어?",
+    "a_ko": "응. 두 플레이어가 함께 퍼즐을 푸는 별도의 협동 캠페인이 있어.",
+    "source": "https://store.steampowered.com/app/620/Portal_2/"
+  },
+  {
+    "game": "Portal 2",
+    "id": "momentum",
+    "q_en": "Does momentum matter in Portal 2?",
+    "a_en": "Yes, momentum is preserved through portals, and many puzzles rely on that behavior.",
+    "q_ko": "포탈 2에서 속도와 관성이 중요해?",
+    "a_ko": "응. 포탈을 통과할 때 운동량이 이어지는 원리를 활용한 퍼즐이 많아.",
+    "source": "https://store.steampowered.com/app/620/Portal_2/"
+  },
+  {
+    "game": "Garry's Mod",
+    "id": "genre",
+    "q_en": "What is Garry's Mod?",
+    "a_en": "Garry's Mod is a physics sandbox built on Valve's Source engine, known for props, tools, and community game modes.",
+    "q_ko": "게리 모드는 어떤 게임이야?",
+    "a_ko": "게리 모드는 Source 엔진 기반 물리 샌드박스로, 소품과 도구, 커뮤니티 게임 모드가 유명해.",
+    "source": "https://store.steampowered.com/app/4000/Garrys_Mod/"
+  },
+  {
+    "game": "Garry's Mod",
+    "id": "tools",
+    "q_en": "What is the tool gun in Garry's Mod?",
+    "a_en": "The tool gun applies different construction and manipulation tools to sandbox entities.",
+    "q_ko": "게리 모드의 툴 건은 뭐야?",
+    "a_ko": "샌드박스 물체에 다양한 건설·조작 도구를 적용하는 장치야.",
+    "source": "https://store.steampowered.com/app/4000/Garrys_Mod/"
+  },
+  {
+    "game": "Garry's Mod",
+    "id": "community",
+    "q_en": "Can Garry's Mod be customized?",
+    "a_en": "Yes, community-made addons, maps, and scripted game modes are a major part of Garry's Mod.",
+    "q_ko": "게리 모드에는 애드온이 있어?",
+    "a_ko": "응. 커뮤니티가 만든 애드온, 맵, 게임 모드가 큰 비중을 차지해.",
+    "source": "https://store.steampowered.com/app/4000/Garrys_Mod/"
+  },
+  {
+    "game": "Factorio",
+    "id": "genre",
+    "q_en": "What is Factorio?",
+    "a_en": "Factorio is a factory-building automation game about designing production lines, logistics, and defenses.",
+    "q_ko": "팩토리오는 어떤 게임이야?",
+    "a_ko": "팩토리오는 생산 라인·물류·방어 시스템을 설계하는 공장 자동화 게임이야.",
+    "source": "https://www.factorio.com/"
+  },
+  {
+    "game": "Factorio",
+    "id": "automation",
+    "q_en": "What is the core challenge in Factorio?",
+    "a_en": "Automating increasingly complicated production chains while managing resources and bottlenecks.",
+    "q_ko": "팩토리오의 핵심 도전은 뭐야?",
+    "a_ko": "자원과 병목을 관리하면서 점점 복잡해지는 생산 공정을 자동화하는 거야.",
+    "source": "https://www.factorio.com/"
+  },
+  {
+    "game": "Factorio",
+    "id": "belt",
+    "q_en": "What do conveyor belts do in Factorio?",
+    "a_en": "Belts move items through a factory, connecting machines and production areas.",
+    "q_ko": "팩토리오의 컨베이어 벨트는 어디에 써?",
+    "a_ko": "기계와 생산 구역 사이에서 아이템을 운반해 생산 흐름을 연결하는 데 써.",
+    "source": "https://www.factorio.com/"
+  },
+  {
+    "game": "Subnautica",
+    "id": "genre",
+    "q_en": "What is Subnautica?",
+    "a_en": "Subnautica is an underwater survival and exploration game on an alien ocean planet.",
+    "q_ko": "서브노티카는 어떤 게임이야?",
+    "a_ko": "서브노티카는 외계 바다 행성에서 수중 생존과 탐험을 하는 게임이야.",
+    "source": "https://unknownworlds.com/subnautica/"
+  },
+  {
+    "game": "Subnautica",
+    "id": "oxygen",
+    "q_en": "Why is oxygen important in Subnautica?",
+    "a_en": "Players must monitor oxygen while diving and use equipment and vehicles to explore deeper.",
+    "q_ko": "서브노티카에서 산소가 왜 중요해?",
+    "a_ko": "잠수 중 산소를 관리해야 하고 깊은 곳으로 탐험하려면 장비와 탈것이 중요해.",
+    "source": "https://unknownworlds.com/subnautica/"
+  },
+  {
+    "game": "Subnautica",
+    "id": "base",
+    "q_en": "Can you build bases in Subnautica?",
+    "a_en": "Yes. Bases provide shelter and room for crafting, storage, and other systems.",
+    "q_ko": "서브노티카에 기지 건설이 있어?",
+    "a_ko": "응. 기지에서 제작·보관 등의 시설을 운영할 수 있어.",
+    "source": "https://unknownworlds.com/subnautica/"
+  },
+  {
+    "game": "Don't Starve Together",
+    "id": "genre",
+    "q_en": "What is Don't Starve Together?",
+    "a_en": "Don't Starve Together is a cooperative survival game focused on hunger, sanity, seasons, crafting, and dangers.",
+    "q_ko": "돈 스타브 투게더는 어떤 게임이야?",
+    "a_ko": "돈 스타브 투게더는 허기·정신력·계절·제작·위협을 관리하는 협동 생존 게임이야.",
+    "source": "https://www.klei.com/games/dont-starve-together"
+  },
+  {
+    "game": "Don't Starve Together",
+    "id": "coop",
+    "q_en": "Is Don't Starve Together multiplayer?",
+    "a_en": "Yes. It is the multiplayer-focused version of Don't Starve.",
+    "q_ko": "돈 스타브 투게더는 멀티플레이 게임이야?",
+    "a_ko": "응. 원작 돈 스타브를 기반으로 멀티플레이를 중심에 둔 게임이야.",
+    "source": "https://www.klei.com/games/dont-starve-together"
+  },
+  {
+    "game": "Don't Starve Together",
+    "id": "seasons",
+    "q_en": "Why do seasons matter in Don't Starve Together?",
+    "a_en": "Weather and seasonal hazards change how players prepare resources, clothing, and shelter.",
+    "q_ko": "돈 스타브 투게더에서 계절이 왜 중요해?",
+    "a_ko": "날씨와 계절별 위협이 달라져서 식량·옷·거처 등 생존 준비가 바뀌기 때문이야.",
+    "source": "https://www.klei.com/games/dont-starve-together"
+  },
+  {
+    "game": "Slay the Spire",
+    "id": "genre",
+    "q_en": "What is Slay the Spire?",
+    "a_en": "Slay the Spire is a roguelike deckbuilding game featuring turn-based card battles and branching routes.",
+    "q_ko": "슬레이 더 스파이어는 무슨 게임이야?",
+    "a_ko": "슬레이 더 스파이어는 카드 전투와 분기 경로를 사용하는 로그라이크 덱빌딩 게임이야.",
+    "source": "https://www.megacrit.com/"
+  },
+  {
+    "game": "Slay the Spire",
+    "id": "deck",
+    "q_en": "What does deckbuilding mean in Slay the Spire?",
+    "a_en": "You choose cards and relics to create combos suited to your strategy during each run.",
+    "q_ko": "슬레이 더 스파이어에서 덱빌딩이란?",
+    "a_ko": "진행 중 카드와 유물을 골라 전략에 맞는 조합을 만드는 거야.",
+    "source": "https://www.megacrit.com/"
+  },
+  {
+    "game": "Slay the Spire",
+    "id": "runs",
+    "q_en": "What happens after losing a run in Slay the Spire?",
+    "a_en": "A run ends and a new run begins with new encounters and card choices.",
+    "q_ko": "슬레이 더 스파이어에서 죽으면 어떻게 돼?",
+    "a_ko": "현재 도전이 끝나고 새 도전에서 다른 적과 카드 선택을 경험할 수 있어.",
+    "source": "https://www.megacrit.com/"
+  },
+  {
+    "game": "Among Us",
+    "id": "genre",
+    "q_en": "What is Among Us?",
+    "a_en": "Among Us is a social deduction multiplayer game about completing tasks and identifying hidden impostors.",
+    "q_ko": "어몽 어스는 어떤 게임이야?",
+    "a_ko": "어몽 어스는 작업을 수행하고 숨어 있는 임포스터를 추리하는 사회적 추리 멀티플레이 게임이야.",
+    "source": "https://www.innersloth.com/games/among-us/"
+  },
+  {
+    "game": "Among Us",
+    "id": "crew",
+    "q_en": "What do crewmates do in Among Us?",
+    "a_en": "Crewmates complete tasks and discuss suspicious behavior to identify impostors.",
+    "q_ko": "어몽 어스의 크루원은 무엇을 해?",
+    "a_ko": "임무를 수행하고 의심스러운 행동을 토론해 임포스터를 찾아내야 해.",
+    "source": "https://www.innersloth.com/games/among-us/"
+  },
+  {
+    "game": "Among Us",
+    "id": "impostor",
+    "q_en": "What do impostors do in Among Us?",
+    "a_en": "Impostors try to eliminate or mislead crewmates without being discovered.",
+    "q_ko": "어몽 어스 임포스터의 목표는 뭐야?",
+    "a_ko": "정체를 들키지 않고 크루원을 제거하거나 속여서 승리하는 거야.",
+    "source": "https://www.innersloth.com/games/among-us/"
+  },
+  {
+    "game": "Lethal Company",
+    "id": "genre",
+    "q_en": "What is Lethal Company?",
+    "a_en": "Lethal Company is a cooperative horror game about collecting scrap on dangerous abandoned moons.",
+    "q_ko": "리썰 컴퍼니는 어떤 게임이야?",
+    "a_ko": "리썰 컴퍼니는 위험한 폐허가 된 달에서 고철을 수집하는 협동 공포 게임이야.",
+    "source": "https://store.steampowered.com/app/1966720/Lethal_Company/"
+  },
+  {
+    "game": "Lethal Company",
+    "id": "quota",
+    "q_en": "What is the quota in Lethal Company?",
+    "a_en": "The company demands that the team collect enough scrap value to meet its quota.",
+    "q_ko": "리썰 컴퍼니의 할당량은 뭐야?",
+    "a_ko": "회사가 정한 목표 금액을 채우기 위해 팀이 고철을 모아야 하는 규칙이야.",
+    "source": "https://store.steampowered.com/app/1966720/Lethal_Company/"
+  },
+  {
+    "game": "Lethal Company",
+    "id": "communication",
+    "q_en": "Why does teamwork matter in Lethal Company?",
+    "a_en": "Communication helps players coordinate exploration, salvage, hazards, and escape.",
+    "q_ko": "리썰 컴퍼니에서 협력이 왜 중요해?",
+    "a_ko": "탐험·고철 회수·위험 회피·탈출을 조율해야 해서 의사소통이 중요해.",
+    "source": "https://store.steampowered.com/app/1966720/Lethal_Company/"
+  },
+  {
+    "game": "The Sims 4",
+    "id": "genre",
+    "q_en": "What is The Sims 4?",
+    "a_en": "The Sims 4 is a life simulation game about creating characters, building homes, and guiding everyday lives.",
+    "q_ko": "심즈 4는 어떤 게임이야?",
+    "a_ko": "심즈 4는 캐릭터를 만들고 집을 꾸미며 일상생활을 이끌어 가는 생활 시뮬레이션 게임이야.",
+    "source": "https://www.ea.com/games/the-sims/the-sims-4"
+  },
+  {
+    "game": "The Sims 4",
+    "id": "build",
+    "q_en": "Can you build houses in The Sims 4?",
+    "a_en": "Yes. Build Mode provides tools for creating and furnishing houses.",
+    "q_ko": "심즈 4에서 집을 지을 수 있어?",
+    "a_ko": "응. 건축 모드에서 집을 짓고 가구를 배치할 수 있어.",
+    "source": "https://www.ea.com/games/the-sims/the-sims-4"
+  },
+  {
+    "game": "The Sims 4",
+    "id": "needs",
+    "q_en": "What are Sim needs in The Sims 4?",
+    "a_en": "Needs represent factors like hunger, energy, hygiene, and social contact that influence Sims.",
+    "q_ko": "심즈 4에서 욕구는 뭐야?",
+    "a_ko": "허기·에너지·위생·사교 등 심의 생활에 영향을 주는 상태를 뜻해.",
+    "source": "https://www.ea.com/games/the-sims/the-sims-4"
+  },
+  {
+    "game": "Rhythm Doctor",
+    "id": "genre",
+    "q_en": "What is Rhythm Doctor?",
+    "a_en": "Rhythm Doctor is a one-button rhythm game by 7th Beat Games about treating patients by defibrillating in time to heartbeats.",
+    "q_ko": "리듬 닥터는 어떤 게임이야?",
+    "a_ko": "리듬 닥터는 7th Beat Games의 원 버튼 리듬 게임으로, 심장 박자에 맞춰 제세동하며 환자를 치료해.",
+    "source": "https://7thbe.at/"
+  },
+  {
+    "game": "Rhythm Doctor",
+    "id": "timing",
+    "q_en": "What is special about Rhythm Doctor timing?",
+    "a_en": "Players learn unique heartbeat patterns and press at the right moment despite distractions.",
+    "q_ko": "리듬 닥터의 타이밍은 뭐가 특별해?",
+    "a_ko": "환자마다 다른 심장 박자 패턴을 익히고 방해 연출 속에서도 정확한 순간에 입력해야 해.",
+    "source": "https://7thbe.at/"
+  },
+  {
+    "game": "Rhythm Doctor",
+    "id": "similarity",
+    "q_en": "Is Rhythm Doctor made by the ADOFAI team?",
+    "a_en": "Yes. Both Rhythm Doctor and A Dance of Fire and Ice are made by 7th Beat Games.",
+    "q_ko": "리듬 닥터와 얼불춤은 같은 개발사 게임이야?",
+    "a_ko": "응. 두 게임 모두 7th Beat Games의 작품이야.",
+    "source": "https://7thbe.at/"
+  },
+  {
+    "game": "osu!",
+    "id": "genre",
+    "q_en": "What is osu!?",
+    "a_en": "osu! is a rhythm game platform with community-made beatmaps and several game modes.",
+    "q_ko": "osu!는 어떤 게임이야?",
+    "a_ko": "osu!는 커뮤니티 제작 비트맵과 여러 플레이 모드를 가진 리듬 게임이야.",
+    "source": "https://osu.ppy.sh/"
+  },
+  {
+    "game": "osu!",
+    "id": "beatmap",
+    "q_en": "What is a beatmap in osu!?",
+    "a_en": "A beatmap defines timing and gameplay objects synchronized to a song.",
+    "q_ko": "osu!의 비트맵은 뭐야?",
+    "a_ko": "노래와 동기화된 입력 타이밍과 게임 오브젝트를 정의한 플레이 데이터야.",
+    "source": "https://osu.ppy.sh/"
+  },
+  {
+    "game": "osu!",
+    "id": "community",
+    "q_en": "Can users create beatmaps in osu!?",
+    "a_en": "Yes. Community-made beatmaps are a core part of osu!.",
+    "q_ko": "osu!에서도 직접 맵을 만들 수 있어?",
+    "a_ko": "응. 이용자들이 만든 비트맵이 osu!의 핵심 콘텐츠야.",
+    "source": "https://osu.ppy.sh/"
+  },
+  {
+    "game": "Cuphead",
+    "id": "genre",
+    "q_en": "What is Cuphead?",
+    "a_en": "Cuphead is a run-and-gun action game known for boss fights and 1930s-cartoon-inspired animation.",
+    "q_ko": "컵헤드는 어떤 게임이야?",
+    "a_ko": "컵헤드는 1930년대 만화풍 애니메이션과 보스전으로 유명한 런앤건 액션 게임이야.",
+    "source": "https://www.cupheadgame.com/"
+  },
+  {
+    "game": "Cuphead",
+    "id": "combat",
+    "q_en": "What does Cuphead emphasize?",
+    "a_en": "Pattern recognition, dodging, and precise shooting are key to its demanding boss fights.",
+    "q_ko": "컵헤드에서는 무엇이 중요해?",
+    "a_ko": "보스 패턴을 익히고 공격을 피하면서 정확하게 공격하는 것이 중요해.",
+    "source": "https://www.cupheadgame.com/"
+  },
+  {
+    "game": "Cuphead",
+    "id": "coop",
+    "q_en": "Can Cuphead be played cooperatively?",
+    "a_en": "Cuphead supports local cooperative play with Cuphead and Mugman.",
+    "q_ko": "컵헤드에는 협동 플레이가 있어?",
+    "a_ko": "응. 컵헤드와 머그맨으로 로컬 협동 플레이를 할 수 있어.",
+    "source": "https://www.cupheadgame.com/"
+  },
+  {
+    "game": "DOOM",
+    "id": "genre",
+    "q_en": "What kind of game is DOOM?",
+    "a_en": "DOOM is a fast-paced first-person shooter series famous for fighting demons.",
+    "q_ko": "둠은 어떤 게임이야?",
+    "a_ko": "둠은 악마들과 싸우는 빠른 템포의 1인칭 슈팅 게임 시리즈야.",
+    "source": "https://bethesda.net/game/doom"
+  },
+  {
+    "game": "DOOM",
+    "id": "style",
+    "q_en": "What makes DOOM combat distinctive?",
+    "a_en": "Many DOOM games reward constant movement and aggressive weapon use.",
+    "q_ko": "둠 전투 스타일의 특징은 뭐야?",
+    "a_ko": "빠른 이동과 적극적인 무기 사용이 중요한 경우가 많아.",
+    "source": "https://bethesda.net/game/doom"
+  },
+  {
+    "game": "DOOM",
+    "id": "history",
+    "q_en": "Why is the original DOOM important?",
+    "a_en": "The original 1993 DOOM helped popularize first-person shooters and user-made levels.",
+    "q_ko": "원작 둠이 왜 유명해?",
+    "a_ko": "1993년 둠은 FPS 장르의 대중화와 사용자 제작 레벨 문화에 큰 영향을 줬어.",
+    "source": "https://bethesda.net/game/doom"
+  },
+  {
+    "game": "Half-Life 2",
+    "id": "genre",
+    "q_en": "What is Half-Life 2?",
+    "a_en": "Half-Life 2 is a story-driven first-person shooter by Valve featuring Gordon Freeman.",
+    "q_ko": "하프라이프 2는 어떤 게임이야?",
+    "a_ko": "하프라이프 2는 고든 프리먼이 등장하는 Valve의 스토리 중심 FPS야.",
+    "source": "https://store.steampowered.com/app/220/HalfLife_2/"
+  },
+  {
+    "game": "Half-Life 2",
+    "id": "gravitygun",
+    "q_en": "What is the gravity gun in Half-Life 2?",
+    "a_en": "The gravity gun manipulates objects using game physics and is useful in combat and puzzles.",
+    "q_ko": "하프라이프 2의 중력건은 뭐야?",
+    "a_ko": "게임 물리를 이용해 물체를 움직이는 도구로, 전투와 퍼즐에 활용할 수 있어.",
+    "source": "https://store.steampowered.com/app/220/HalfLife_2/"
+  },
+  {
+    "game": "Half-Life 2",
+    "id": "source",
+    "q_en": "What engine does Half-Life 2 use?",
+    "a_en": "Half-Life 2 is built on Valve's Source engine.",
+    "q_ko": "하프라이프 2는 어떤 엔진을 사용해?",
+    "a_ko": "하프라이프 2는 Valve의 Source 엔진으로 제작됐어.",
+    "source": "https://store.steampowered.com/app/220/HalfLife_2/"
+  },
+  {
+    "game": "Tetris",
+    "id": "genre",
+    "q_en": "What is Tetris?",
+    "a_en": "Tetris is a falling-block puzzle game about fitting tetrominoes together to clear horizontal lines.",
+    "q_ko": "테트리스는 어떤 게임이야?",
+    "a_ko": "테트리스는 떨어지는 테트로미노 블록을 맞춰 가로줄을 없애는 퍼즐 게임이야.",
+    "source": "https://tetris.com/"
+  },
+  {
+    "game": "Tetris",
+    "id": "lines",
+    "q_en": "How are lines cleared in Tetris?",
+    "a_en": "A fully filled horizontal row disappears, making room for new pieces.",
+    "q_ko": "테트리스에서 줄은 어떻게 지워?",
+    "a_ko": "가로 한 줄을 빈칸 없이 채우면 그 줄이 사라져.",
+    "source": "https://tetris.com/"
+  },
+  {
+    "game": "Tetris",
+    "id": "tetromino",
+    "q_en": "What is a tetromino?",
+    "a_en": "A tetromino is a shape made from four connected squares.",
+    "q_ko": "테트로미노가 뭐야?",
+    "a_ko": "정사각형 네 개를 변끼리 이어 만든 블록 모양이야.",
+    "source": "https://tetris.com/"
+  },
+  {
+    "game": "Buckshot Roulette",
+    "id": "genre",
+    "q_en": "What is Buckshot Roulette?",
+    "a_en": "Buckshot Roulette is a horror strategy game inspired by Russian roulette, using a shotgun and tactical items.",
+    "q_ko": "벅샷 룰렛은 어떤 게임이야?",
+    "a_ko": "벅샷 룰렛은 산탄총과 전략 아이템을 사용하는 러시안 룰렛 소재의 공포 전략 게임이야.",
+    "source": "https://store.steampowered.com/app/2835570/Buckshot_Roulette/"
+  },
+  {
+    "game": "Buckshot Roulette",
+    "id": "tactics",
+    "q_en": "Why do items matter in Buckshot Roulette?",
+    "a_en": "Items can affect information and decisions, turning uncertainty into tactical choices.",
+    "q_ko": "벅샷 룰렛에서 아이템이 왜 중요해?",
+    "a_ko": "정보와 선택을 바꿔서 불확실한 상황에서도 전략적인 판단을 할 수 있게 해주기 때문이야.",
+    "source": "https://store.steampowered.com/app/2835570/Buckshot_Roulette/"
+  },
+  {
+    "game": "Buckshot Roulette",
+    "id": "developer",
+    "q_en": "Who developed Buckshot Roulette?",
+    "a_en": "Buckshot Roulette was developed by Mike Klubnika.",
+    "q_ko": "벅샷 룰렛 개발자는 누구야?",
+    "a_ko": "개발자는 Mike Klubnika야.",
+    "source": "https://store.steampowered.com/app/2835570/Buckshot_Roulette/"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-yellowtissue",
+    "q_en": "What was recovered according to the first C:U research memo?",
+    "a_en": "A research memo describes a fist-sized yellow, slimy biological specimen of unknown extraterrestrial origin recovered from wreckage.",
+    "q_ko": "C:U 첫 연구 메모에 나오는 노란 조직은 뭐야?",
+    "a_ko": "첫 연구 메모는 잔해에서 회수된 주먹 크기의 노랗고 끈적한 외계 생물 조직을 설명해.",
+    "source": "user-upload:EN.json.txt:pdaNotes.0"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-yellowblood",
+    "q_en": "Why was yellow blood remarkable in the research notes?",
+    "a_en": "Researchers describe yellow blood as highly adaptable, able to repair itself rapidly even under intense radiation.",
+    "q_ko": "C:U 노란 피가 특별한 이유는 뭐야?",
+    "a_ko": "연구진의 기록에 따르면 노란 혈액은 강한 방사선에도 빠르게 스스로 복구할 만큼 적응력이 높아.",
+    "source": "user-upload:EN.json.txt:pdaNotes.1"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-firstsaw",
+    "q_en": "What breakthrough is described in the viable-specimen research memo?",
+    "a_en": "A researcher describes a viable independently breathing specimen, calling it the first truly artificial sapience.",
+    "q_ko": "C:U의 인공 지성 연구는 어떤 성과를 냈어?",
+    "a_ko": "한 연구 메모는 배양조 밖에서 스스로 호흡하는 생존 가능한 개체를 얻었다며 최초의 진정한 인공 지성이라고 표현해.",
+    "source": "user-upload:EN.json.txt:pdaNotes.2"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-saw01",
+    "q_en": "What was a proposed change to the SAW-01 genome?",
+    "a_en": "A later memo says researchers were modifying SAW-01 so reproduction could help meet demand beyond cloning capacity.",
+    "q_ko": "C:U SAW-01 유전자를 왜 바꾸려 했어?",
+    "a_ko": "연구 메모에서는 복제 설비의 생산력이 수요를 따라가지 못해 번식이 가능하도록 유전자를 바꾸려 했다고 설명해.",
+    "source": "user-upload:EN.json.txt:pdaNotes.3"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-energy",
+    "q_en": "What unusual power source is described in a C:U memo?",
+    "a_en": "A memo describes an extraordinarily dense energy source potentially capable of powering large teleportation systems.",
+    "q_ko": "C:U 연구 기록에 나오는 초고밀도 에너지원은 뭐야?",
+    "a_ko": "어떤 기록은 거대한 순간이동 장치에도 사용할 수 있을 정도로 에너지 밀도가 높은 수수께끼의 물체를 언급해.",
+    "source": "user-upload:EN.json.txt:pdaNotes.5"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-osprey",
+    "q_en": "What was OSPREY designed to transport?",
+    "a_en": "An incident transcript says the OSPREY teleportation system was designed to transport entire buildings.",
+    "q_ko": "C:U의 OSPREY 순간이동 설비는 뭘 옮기려 했어?",
+    "a_ko": "사고 기록에 따르면 OSPREY는 건물 전체를 옮길 수 있도록 설계된 순간이동 설비야.",
+    "source": "user-upload:EN.json.txt:pdaNotes.6"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-downsizing",
+    "q_en": "Why was the SAW project in conflict with management?",
+    "a_en": "A meeting transcript describes management reducing the SAW project despite researchers arguing the specimens were central to their work.",
+    "q_ko": "C:U에서 SAW 프로젝트가 축소된 이유는 뭐야?",
+    "a_ko": "회의록에서는 경영진이 SAW 연구를 축소하려 하고 연구진이 핵심 연구 자산이라는 이유로 반대하는 갈등이 드러나. 모든 경영상 이유가 공개된 건 아니야.",
+    "source": "user-upload:EN.json.txt:pdaNotes.7"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-healthhud",
+    "q_en": "What does the C:U Digital Interoception Device do?",
+    "a_en": "A hardware research memo describes the Digital Interoception Device, informally called Health HUD, as neurologic technology developed with the SAW project.",
+    "q_ko": "C:U의 Digital Interoception Device는 뭐야?",
+    "a_ko": "신경 장치 연구 문서는 Digital Interoception Device를 'Health HUD'라고도 부르며, SAW 프로젝트와 협력해 개발한 기술이라고 설명해.",
+    "source": "user-upload:EN.json.txt:pdaNotes.12"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-riot",
+    "q_en": "What did the report claim about SAW-03 and the riot?",
+    "a_en": "An internal message alleges that the SAW subjects involved in a riot learned what they knew from SAW-03; the allegation is from the document, not independently verified.",
+    "q_ko": "C:U의 SAW-03와 폭동은 어떤 관계라고 기록돼 있어?",
+    "a_ko": "내부 메시지는 폭동에 가담한 SAW 개체들이 SAW-03로부터 정보를 얻었다고 주장해. 이건 기록 속 주장이지 별도로 검증된 사실은 아니야.",
+    "source": "user-upload:EN.json.txt:pdaNotes.13"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-secretmeeting",
+    "q_en": "What was unusual about an employee's contact with SAW-03?",
+    "a_en": "An internal announcement says an employee spoofed access codes to meet a SAW-03 subject and exchanged unauthorized information.",
+    "q_ko": "C:U SAW-03와 비밀 접촉한 직원 이야기는 뭐야?",
+    "a_ko": "내부 공지에 따르면 한 직원이 출입 코드를 위조해 SAW-03 개체를 몰래 만나고 허가되지 않은 정보를 주고받았어.",
+    "source": "user-upload:EN.json.txt:pdaNotes.14"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-plushies",
+    "q_en": "Are plushies mentioned in C:U lore notes?",
+    "a_en": "Yes. An archived chat jokes about a plushie product line and how the public might react if the company's research became known.",
+    "q_ko": "C:U 세계관 메모에 인형 관련 이야기도 있어?",
+    "a_ko": "응. 보관된 대화에서 봉제 인형 상품과 회사의 비밀 연구가 세상에 알려졌을 때의 반응을 농담처럼 언급해.",
+    "source": "user-upload:EN.json.txt:pdaNotes.15"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-excruciator",
+    "q_en": "What is the EXCRUCIATOR in C:U documents?",
+    "a_en": "A memo describes the fictional EXCRUCIATOR as an experimental device that stimulates neural signals to cause extreme pain.",
+    "q_ko": "C:U 연구 기록의 EXCRUCIATOR는 뭐야?",
+    "a_ko": "기록에 따르면 EXCRUCIATOR는 신경 신호를 자극해 극심한 고통을 유발하는 가상의 실험 장치야.",
+    "source": "user-upload:EN.json.txt:pdaNotes.16"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-excruciatorcancel",
+    "q_en": "Why was the EXCRUCIATOR project canceled?",
+    "a_en": "A follow-up memo says leadership considered it impractical, deranged, and a public-relations disaster, although internal use was reportedly allowed.",
+    "q_ko": "EXCRUCIATOR 개발은 왜 취소됐어?",
+    "a_ko": "후속 기록에서는 실용성이 부족하고 윤리적으로 심각하며 홍보상 재앙이 될 수 있다는 이유로 취소됐지만 내부 사용은 허용됐다고 적혀 있어.",
+    "source": "user-upload:EN.json.txt:pdaNotes.17"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-ethics",
+    "q_en": "Do the C:U documents criticize the experiment program?",
+    "a_en": "Yes. An incident report contains a statement from someone who describes the treatment of SAW specimens as evil and admits involvement.",
+    "q_ko": "C:U 연구 문서에 실험체 학대를 비판하는 기록도 있어?",
+    "a_ko": "응. 한 사고 기록에는 SAW 개체들에게 벌인 일이 악하다고 비판하면서 자신도 동참했다고 인정하는 내용이 있어.",
+    "source": "user-upload:EN.json.txt:pdaNotes.18"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-saw03",
+    "q_en": "What distinctive trait is mentioned about SAW-03?",
+    "a_en": "A SAW project memo describes an intended SAW-03 specimen with soft milky-white fur and more advanced psychological testing potential.",
+    "q_ko": "C:U SAW-03은 어떤 특징으로 설계됐어?",
+    "a_ko": "SAW 프로젝트 메모는 SAW-03을 부드러운 우윳빛 털을 가진 개체로 묘사하며, 더 복잡한 심리 실험에 적합하게 만들려 했다고 설명해.",
+    "source": "user-upload:EN.json.txt:pdaNotes.19"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-saw12",
+    "q_en": "What does the SAW-12 memo say?",
+    "a_en": "The Applied Ballistics memo complains that SAW-12 specimens were sturdy but very difficult to control and unintelligent.",
+    "q_ko": "C:U SAW-12에 대한 기록은 뭐라고 해?",
+    "a_ko": "탄도 연구 부서의 메모에서는 SAW-12가 튼튼하지만 통제하기 어렵고 지능이 낮다고 불평해.",
+    "source": "user-upload:EN.json.txt:pdaNotes.20"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-wasteteleport",
+    "q_en": "How is waste mentioned in C:U teleportation documents?",
+    "a_en": "A teleportation memo refers to using public waste for calibration testing and disposing of sensitive objects.",
+    "q_ko": "C:U 순간이동 연구에서 폐기물을 사용한 이유는?",
+    "a_ko": "순간이동 부서 기록은 일반 폐기물을 보정 실험에 활용하면서 민감한 물체를 처리하는 수단으로도 사용했다고 말해.",
+    "source": "user-upload:EN.json.txt:pdaNotes.21"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-victims",
+    "q_en": "How did some C:U survivors arrive according to notes?",
+    "a_en": "A survivor note says victims were incapacitated with a dart and forced into pods to be sent to the planet.",
+    "q_ko": "C:U 생존자들은 어떻게 행성으로 보내졌대?",
+    "a_ko": "한 생존자 메모는 다트에 맞아 의식을 잃은 뒤 강제로 포드에 실려 행성으로 보내졌다고 증언해.",
+    "source": "user-upload:EN.json.txt:notes.0"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-redblood",
+    "q_en": "What do notes say opens some bio-terminals in C:U?",
+    "a_en": "One survivor note claims certain boxes connected to computers require red blood, specifically, to be opened.",
+    "q_ko": "C:U에서 붉은 피가 필요한 상자가 있어?",
+    "a_ko": "한 생존자 메모에 따르면 컴퓨터가 연결된 특정 상자는 노란 피가 아니라 붉은 피를 흘려야 열려.",
+    "source": "user-upload:EN.json.txt:notes.2"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-heatplant",
+    "q_en": "How can a survivor deal with freezing environments in C:U notes?",
+    "a_en": "A survivor note recommends avoiding getting wet and using heat-emitting plants and machines while moving through cold areas.",
+    "q_ko": "C:U 추운 지형에서 생존자가 권한 방법은?",
+    "a_ko": "생존자 메모에서는 젖지 않도록 하고 열을 내는 식물이나 기계 사이를 이동해 추위를 피하라고 기록해.",
+    "source": "user-upload:EN.json.txt:notes.6"
+  }
+]
