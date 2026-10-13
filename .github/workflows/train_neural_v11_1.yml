@@ -18,7 +18,7 @@ permissions:
 
 concurrency:
   group: hgaim-v11-1-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   train:
