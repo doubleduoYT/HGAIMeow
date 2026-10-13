@@ -302,8 +302,8 @@ class HGAIEngine:
    # Refuse unsupported exact dates and developer ages. General questions
    # retain the original v10 curated/retriever/neural behavior.
    if detect_games(clarified) and re.search(
-       r"출시일|발매일|출시\\s*연도|출시\\s*날짜|발매\\s*연도|몇\\s*살|나이|생년월일|"
-       r"\\b(?:release\\s+date|birthday|how\\s+old|date\\s+of\\s+birth)\\b",
+       r"출시일|발매일|출시\s*연도|출시\s*날짜|발매\s*연도|몇\s*살|나이|생년월일|"
+       r"\b(?:release\s+date|birthday|how\s+old|date\s+of\s+birth)\b",
        clarified,re.I):
     unknown=grounded_answer(clarified,unknown_policy="abstain")
     if unknown and unknown["route"]=="abstain":
