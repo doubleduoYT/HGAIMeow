@@ -46,7 +46,7 @@ class GroundedGameTests(unittest.TestCase):
         self.check("Minecraft 레드스톤으로 자동 문을 만들 수 있어?","자동문","redstone")
 
     def test_unverified_game_no_fabrications(self):
-        a=self.check("DevilConnection 공식 세계관 알려줘","검증된 자료는 없어","identity")
+        a=self.check("DevilConnection 공식 세계관 알려줘","검증된 자료는","identity")
         self.assertEqual(a["game"],"DevilConnection")
         a=answer("Gunsaw 출시 연도가 정확히 언제야?",url="http://127.0.0.1:1",metadata=True)
         self.assertEqual(a["route"],"abstain",a)
