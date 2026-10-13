@@ -1,0 +1,136 @@
+name: HGAIM v15 Qwen3 Bilingual Factuality and Multi-turn
+
+on:
+  push:
+    branches: [feature/hgaim-v15-qwen3-grounded]
+    paths:
+      - prepare_sft_v15.py
+      - train_lora_v15.py
+      - evaluate_v15.py
+      - .github/workflows/train_v15_qwen3.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: hgaim-v15-qwen3-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      TOKENIZERS_PARALLELISM: "false"
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Verify legacy nyang endings and Python syntax
+        run: |
+          python -m unittest -v test_v14_style
+          python -m py_compile prepare_sft_v14.py prepare_sft_v15.py train_lora_v15.py evaluate_v15.py nyang_style_v14.py
+
+      - name: Load source-grounded game QA from successful v13 run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p previous v13_game_data
+          gh run download 38380993661 --repo "${{ github.repository }}" --name hgaim-v13-bilingual-game-expert-3 --dir previous
+          cp previous/v13_game_data/game_qa_v13_train.jsonl v13_game_data/
+          cp previous/v13_game_data/game_qa_v13_holdout.jsonl v13_game_data/
+          test -s v13_game_data/game_qa_v13_train.jsonl
+          test -s v13_game_data/game_qa_v13_holdout.jsonl
+
+      - name: Prepare verified bilingual knowledge and conversation data
+        run: |
+          python prepare_sft_v14.py --output v14_data
+          python prepare_sft_v15.py --output v15_data
+          python - <<'PY'
+          import json
+          r=json.load(open('v15_data/report.json',encoding='utf-8'))
+          print('TRAIN SAMPLES',r['train_records'])
+          print('ADDED SOURCE-BOUND FACT VARIANTS',r['additional_fact_variants'])
+          print('MULTILINGUAL',r['language_counts'])
+          assert r['train_records']>=1100, r
+          assert r['holdout_records']>=30, r
+          assert r['fact_group_leakage'] is False
+          assert min(r['language_counts'].values())>=300
+          PY
+
+      - name: Install CPU Qwen3 training libraries
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "torch>=2.3,<3" "transformers>=4.51,<5" "peft>=0.15,<1" "accelerate>=1,<2" "safetensors>=0.4"
+
+      - name: Confirm Qwen3 multi-turn assistant supervision in actual tokenizer
+        run: |
+          python - <<'PY'
+          from transformers import AutoTokenizer
+          from train_lora_v15 import encode_dialogue
+          t=AutoTokenizer.from_pretrained('Qwen/Qwen3-0.6B')
+          row={"messages":[
+              {"role":"system","content":"You are an assistant."},
+              {"role":"user","content":"Hello"},
+              {"role":"assistant","content":"First useful answer."},
+              {"role":"user","content":"And then?"},
+              {"role":"assistant","content":"Second useful answer."}]}
+          encoded=encode_dialogue(t,row,384)
+          assert encoded and encoded['assistant_turns']==2,encoded
+          text=t.decode([n for n,y in zip(encoded['ids'],encoded['labels']) if y!=-100])
+          print("SUPERVISED SPANS:",text)
+          assert 'First useful answer' in text and 'Second useful answer' in text
+          assert 'And then?' not in text
+          print("PASS: both assistant turns trained; user text masked")
+          PY
+
+      - name: One-step end-to-end LoRA smoke training
+        run: |
+          python train_lora_v15.py --steps 1 --eval-every 1 --eval-count 8 --max-length 256 --output /tmp/hgaim_v15_smoke
+
+      - name: Qwen3 pretrained baseline free-generation benchmark
+        run: |
+          python evaluate_v15.py --limit 12 --max-new-tokens 90 --report V15_BASE_GENERATION.json
+
+      - name: Train source-grounded v15 Qwen3 candidate
+        run: |
+          python train_lora_v15.py --steps 960 --eval-every 160 --eval-count 24 --max-length 384 --threads 2 --lr 0.00006 --output hgaim_v15_lora
+
+      - name: Test v15 responses against same independent prompts
+        run: |
+          python evaluate_v15.py --adapter hgaim_v15_lora --limit 12 --max-new-tokens 90 --report V15_TUNED_GENERATION.json
+          python - <<'PY'
+          import json
+          base=json.load(open('V15_BASE_GENERATION.json',encoding='utf-8'))
+          tuned=json.load(open('V15_TUNED_GENERATION.json',encoding='utf-8'))
+          train=json.load(open('hgaim_v15_lora/training_report.json',encoding='utf-8'))
+          print('SELECTED STEP',train['best_step'])
+          print('HELDOUT LOSS',train['baseline_holdout_loss'],'->',train['best_holdout_loss'])
+          print('HEURISTIC ONLY: game concept hits',base['heuristic_passes'],'->',tuned['heuristic_passes'])
+          for b,t in zip(base['samples'],tuned['samples']):
+              print('QUESTION:',t['question'])
+              print('BASE:',b['raw'])
+              print('TUNED:',t['raw'])
+          print('DO NOT DEPLOY AUTOMATICALLY. Factual accuracy requires human review.')
+          PY
+
+      - name: Store checkpoint adapter and diagnostic artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hgaim-v15-qwen3-bilingual-${{ github.run_number }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            hgaim_v15_lora/
+            v15_data/report.json
+            V15_BASE_GENERATION.json
+            V15_TUNED_GENERATION.json
