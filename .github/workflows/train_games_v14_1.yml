@@ -1,0 +1,107 @@
+name: HGAIM v14.1 Source-Grounded Game Specialist LoRA
+
+on:
+  push:
+    branches: [feature/hgaim-v14-1-game-specialist]
+    paths:
+      - train_lora_v14_1.py
+      - evaluate_games_v14_1.py
+      - .github/workflows/train_games_v14_1.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: hgaim-v14-1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      TOKENIZERS_PARALLELISM: "false"
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Test style and compile follow-on SFT scripts
+        run: |
+          python -m unittest -v test_v14_style
+          python -m py_compile train_lora_v14.py train_lora_v14_1.py evaluate_games_v14_1.py merge_v14_lora.py
+
+      - name: Download completed v14 LoRA and source-linked v13 game data
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 38389521113 --repo "${{ github.repository }}" --name hgaim-v14-pretrained-lora-1 --dir .
+          test -s hgaim_v14_lora/adapter_config.json
+          mkdir -p v13_game_data
+          gh run download 38380993661 --repo "${{ github.repository }}" --name hgaim-v13-bilingual-game-expert-3 --dir previous
+          cp previous/v13_game_data/game_qa_v13_train.jsonl v13_game_data/
+          cp previous/v13_game_data/game_qa_v13_holdout.jsonl v13_game_data/
+
+      - name: Prepare and audit balanced bilingual game and conversation examples
+        run: |
+          python prepare_sft_v14.py --output v14_data
+          python - <<'PY'
+          import json
+          r=json.load(open("v14_data/report_v14.json",encoding="utf8"))
+          assert r["training_records"]>=900
+          assert r["game_records"]>=600
+          print("Game specialist samples:", r["training_records"],r["game_records"])
+          PY
+
+      - name: Install pretrained LoRA libraries
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "torch>=2.3,<3" "transformers>=4.45,<5" "peft>=0.13,<1" "accelerate>=1,<2" "safetensors>=0.4"
+
+      - name: One-step continue-training compatibility test
+        run: |
+          python train_lora_v14_1.py --steps 1 --eval-every 1 --max-length 128 --output /tmp/v14_1_smoke
+
+      - name: Extended source-grounded game LoRA continuation
+        run: |
+          python train_lora_v14_1.py --steps 720 --eval-every 120 --max-length 192 --threads 2 --output hgaim_v14_1_lora
+
+      - name: Compare actual game answers, not just training loss
+        run: |
+          python evaluate_games_v14_1.py --adapter hgaim_v14_lora --limit 12 --max-tokens 80 --out V14_GAME_BEFORE.json
+          python evaluate_games_v14_1.py --adapter hgaim_v14_1_lora --limit 12 --max-tokens 80 --out V14_1_GAME_AFTER.json
+          python evaluate_pretrained_v14.py --adapter hgaim_v14_1_lora --limit 6 --max-new-tokens 80 --report V14_1_GENERAL_EVAL.json
+          python - <<'PY'
+          import json
+          s=json.load(open("hgaim_v14_1_lora/training_report.json",encoding="utf8"))
+          print("Selected step:",s["selected_step"])
+          print("Holdout loss:",s["baseline_holdout_loss"],"->",s["selected_holdout_loss"])
+          before=json.load(open("V14_GAME_BEFORE.json",encoding="utf8"))["tests"]
+          after=json.load(open("V14_1_GAME_AFTER.json",encoding="utf8"))["tests"]
+          for b,a in zip(before,after):
+              print("Q:",a["question"])
+              print("v14:",b["raw"])
+              print("v14.1:",a["raw"])
+          print("Keyword hit count is NOT a semantic/factual accuracy score. No deployment.")
+          PY
+
+      - name: Store research adapter and detailed before/after QA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hgaim-v14-1-game-specialist-${{ github.run_number }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            hgaim_v14_1_lora/
+            v14_data/report_v14.json
+            V14_GAME_BEFORE.json
+            V14_1_GAME_AFTER.json
+            V14_1_GENERAL_EVAL.json
