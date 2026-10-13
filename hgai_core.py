@@ -16,6 +16,8 @@ def is_english_question(q):
 def system_text_for_question(q):
  return SYSTEM_TEXT_EN if is_english_question(q) else SYSTEM_TEXT
 FALLBACK_RESPONSE="잘 모르겠다냥 새로 배우고 싶다냥 :3"
+FALLBACK_RESPONSE_EN="I can\u0027t answer that reliably yet, meow. Could you clarify what you need?"
+def fallback_for_question(question):return FALLBACK_RESPONSE_EN if is_english_question(question) else FALLBACK_RESPONSE
 SPECIAL=["<pad>","<unk>","<|system|>","<|user|>","<|context|>","<|assistant|>","<|end|>"]
 PRESETS={
  "main":{"block_size":256,"batch_size":4,"n_embd":224,"n_head":7,"n_layer":5,"ffn_hidden":640,"dropout":.08,"max_vocab":16000},
@@ -269,7 +271,7 @@ class HGAIEngine:
   q=clean_text(user)
   if not q:return "냥? 뭔가 말해줘라냥 :3"
   if mode=="raw-neural":
-   g=neural_generate(self.model,self.tok,self.device,self.cfg,q,None,self.history,temperature,top_k,top_p,max_new_tokens) if self.model else None;a=fix_nyang(g) if quality_ok(g) else FALLBACK_RESPONSE;self._save(q,a);return a
+   g=neural_generate(self.model,self.tok,self.device,self.cfg,q,None,self.history,temperature,top_k,top_p,max_new_tokens) if self.model else None;a=fix_nyang(g) if quality_ok(g) else fallback_for_question(q);self._save(q,a);return a
   for fn in (self.remember_rule,calculator_reply,curated_direct_reply):
    a=fn(q)
    if a:self._save(q,a);return a
@@ -289,5 +291,5 @@ class HGAIEngine:
   if self.model and (mode=="neural" or (mode=="hybrid" and self.neural_ready)):
    g=neural_generate(self.model,self.tok,self.device,self.cfg,q,None,self.history,temperature,top_k,top_p,max_new_tokens)
    if quality_ok(g):self._save(q,g);return fix_nyang(g)
-  a=FALLBACK_RESPONSE;self._save(q,a);return a
+  a=fallback_for_question(q);self._save(q,a);return a
  def model_info(self):return {"version":"hgai-v10","preset":self.preset,"runtime_pairs":len(self.pairs),"model_loaded":self.model is not None,"params":count_params(self.model),"neural_ready":self.neural_ready,"checkpoint":self.checkpoint_meta,"device":self.device,"external_model_required":False}
