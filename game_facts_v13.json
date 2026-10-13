@@ -853,5 +853,185 @@
     "q_ko": "벅샷 룰렛 개발자는 누구야?",
     "a_ko": "개발자는 Mike Klubnika야.",
     "source": "https://store.steampowered.com/app/2835570/Buckshot_Roulette/"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-yellowtissue",
+    "q_en": "What was recovered according to the first C:U research memo?",
+    "a_en": "A research memo describes a fist-sized yellow, slimy biological specimen of unknown extraterrestrial origin recovered from wreckage.",
+    "q_ko": "C:U 첫 연구 메모에 나오는 노란 조직은 뭐야?",
+    "a_ko": "첫 연구 메모는 잔해에서 회수된 주먹 크기의 노랗고 끈적한 외계 생물 조직을 설명해.",
+    "source": "user-upload:EN.json.txt:pdaNotes.0"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-yellowblood",
+    "q_en": "Why was yellow blood remarkable in the research notes?",
+    "a_en": "Researchers describe yellow blood as highly adaptable, able to repair itself rapidly even under intense radiation.",
+    "q_ko": "C:U 노란 피가 특별한 이유는 뭐야?",
+    "a_ko": "연구진의 기록에 따르면 노란 혈액은 강한 방사선에도 빠르게 스스로 복구할 만큼 적응력이 높아.",
+    "source": "user-upload:EN.json.txt:pdaNotes.1"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-firstsaw",
+    "q_en": "What breakthrough is described in the viable-specimen research memo?",
+    "a_en": "A researcher describes a viable independently breathing specimen, calling it the first truly artificial sapience.",
+    "q_ko": "C:U의 인공 지성 연구는 어떤 성과를 냈어?",
+    "a_ko": "한 연구 메모는 배양조 밖에서 스스로 호흡하는 생존 가능한 개체를 얻었다며 최초의 진정한 인공 지성이라고 표현해.",
+    "source": "user-upload:EN.json.txt:pdaNotes.2"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-saw01",
+    "q_en": "What was a proposed change to the SAW-01 genome?",
+    "a_en": "A later memo says researchers were modifying SAW-01 so reproduction could help meet demand beyond cloning capacity.",
+    "q_ko": "C:U SAW-01 유전자를 왜 바꾸려 했어?",
+    "a_ko": "연구 메모에서는 복제 설비의 생산력이 수요를 따라가지 못해 번식이 가능하도록 유전자를 바꾸려 했다고 설명해.",
+    "source": "user-upload:EN.json.txt:pdaNotes.3"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-energy",
+    "q_en": "What unusual power source is described in a C:U memo?",
+    "a_en": "A memo describes an extraordinarily dense energy source potentially capable of powering large teleportation systems.",
+    "q_ko": "C:U 연구 기록에 나오는 초고밀도 에너지원은 뭐야?",
+    "a_ko": "어떤 기록은 거대한 순간이동 장치에도 사용할 수 있을 정도로 에너지 밀도가 높은 수수께끼의 물체를 언급해.",
+    "source": "user-upload:EN.json.txt:pdaNotes.5"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-osprey",
+    "q_en": "What was OSPREY designed to transport?",
+    "a_en": "An incident transcript says the OSPREY teleportation system was designed to transport entire buildings.",
+    "q_ko": "C:U의 OSPREY 순간이동 설비는 뭘 옮기려 했어?",
+    "a_ko": "사고 기록에 따르면 OSPREY는 건물 전체를 옮길 수 있도록 설계된 순간이동 설비야.",
+    "source": "user-upload:EN.json.txt:pdaNotes.6"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-downsizing",
+    "q_en": "Why was the SAW project in conflict with management?",
+    "a_en": "A meeting transcript describes management reducing the SAW project despite researchers arguing the specimens were central to their work.",
+    "q_ko": "C:U에서 SAW 프로젝트가 축소된 이유는 뭐야?",
+    "a_ko": "회의록에서는 경영진이 SAW 연구를 축소하려 하고 연구진이 핵심 연구 자산이라는 이유로 반대하는 갈등이 드러나. 모든 경영상 이유가 공개된 건 아니야.",
+    "source": "user-upload:EN.json.txt:pdaNotes.7"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-healthhud",
+    "q_en": "What does the C:U Digital Interoception Device do?",
+    "a_en": "A hardware research memo describes the Digital Interoception Device, informally called Health HUD, as neurologic technology developed with the SAW project.",
+    "q_ko": "C:U의 Digital Interoception Device는 뭐야?",
+    "a_ko": "신경 장치 연구 문서는 Digital Interoception Device를 'Health HUD'라고도 부르며, SAW 프로젝트와 협력해 개발한 기술이라고 설명해.",
+    "source": "user-upload:EN.json.txt:pdaNotes.12"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-riot",
+    "q_en": "What did the report claim about SAW-03 and the riot?",
+    "a_en": "An internal message alleges that the SAW subjects involved in a riot learned what they knew from SAW-03; the allegation is from the document, not independently verified.",
+    "q_ko": "C:U의 SAW-03와 폭동은 어떤 관계라고 기록돼 있어?",
+    "a_ko": "내부 메시지는 폭동에 가담한 SAW 개체들이 SAW-03로부터 정보를 얻었다고 주장해. 이건 기록 속 주장이지 별도로 검증된 사실은 아니야.",
+    "source": "user-upload:EN.json.txt:pdaNotes.13"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-secretmeeting",
+    "q_en": "What was unusual about an employee's contact with SAW-03?",
+    "a_en": "An internal announcement says an employee spoofed access codes to meet a SAW-03 subject and exchanged unauthorized information.",
+    "q_ko": "C:U SAW-03와 비밀 접촉한 직원 이야기는 뭐야?",
+    "a_ko": "내부 공지에 따르면 한 직원이 출입 코드를 위조해 SAW-03 개체를 몰래 만나고 허가되지 않은 정보를 주고받았어.",
+    "source": "user-upload:EN.json.txt:pdaNotes.14"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-plushies",
+    "q_en": "Are plushies mentioned in C:U lore notes?",
+    "a_en": "Yes. An archived chat jokes about a plushie product line and how the public might react if the company's research became known.",
+    "q_ko": "C:U 세계관 메모에 인형 관련 이야기도 있어?",
+    "a_ko": "응. 보관된 대화에서 봉제 인형 상품과 회사의 비밀 연구가 세상에 알려졌을 때의 반응을 농담처럼 언급해.",
+    "source": "user-upload:EN.json.txt:pdaNotes.15"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-excruciator",
+    "q_en": "What is the EXCRUCIATOR in C:U documents?",
+    "a_en": "A memo describes the fictional EXCRUCIATOR as an experimental device that stimulates neural signals to cause extreme pain.",
+    "q_ko": "C:U 연구 기록의 EXCRUCIATOR는 뭐야?",
+    "a_ko": "기록에 따르면 EXCRUCIATOR는 신경 신호를 자극해 극심한 고통을 유발하는 가상의 실험 장치야.",
+    "source": "user-upload:EN.json.txt:pdaNotes.16"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-excruciatorcancel",
+    "q_en": "Why was the EXCRUCIATOR project canceled?",
+    "a_en": "A follow-up memo says leadership considered it impractical, deranged, and a public-relations disaster, although internal use was reportedly allowed.",
+    "q_ko": "EXCRUCIATOR 개발은 왜 취소됐어?",
+    "a_ko": "후속 기록에서는 실용성이 부족하고 윤리적으로 심각하며 홍보상 재앙이 될 수 있다는 이유로 취소됐지만 내부 사용은 허용됐다고 적혀 있어.",
+    "source": "user-upload:EN.json.txt:pdaNotes.17"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-ethics",
+    "q_en": "Do the C:U documents criticize the experiment program?",
+    "a_en": "Yes. An incident report contains a statement from someone who describes the treatment of SAW specimens as evil and admits involvement.",
+    "q_ko": "C:U 연구 문서에 실험체 학대를 비판하는 기록도 있어?",
+    "a_ko": "응. 한 사고 기록에는 SAW 개체들에게 벌인 일이 악하다고 비판하면서 자신도 동참했다고 인정하는 내용이 있어.",
+    "source": "user-upload:EN.json.txt:pdaNotes.18"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-saw03",
+    "q_en": "What distinctive trait is mentioned about SAW-03?",
+    "a_en": "A SAW project memo describes an intended SAW-03 specimen with soft milky-white fur and more advanced psychological testing potential.",
+    "q_ko": "C:U SAW-03은 어떤 특징으로 설계됐어?",
+    "a_ko": "SAW 프로젝트 메모는 SAW-03을 부드러운 우윳빛 털을 가진 개체로 묘사하며, 더 복잡한 심리 실험에 적합하게 만들려 했다고 설명해.",
+    "source": "user-upload:EN.json.txt:pdaNotes.19"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-saw12",
+    "q_en": "What does the SAW-12 memo say?",
+    "a_en": "The Applied Ballistics memo complains that SAW-12 specimens were sturdy but very difficult to control and unintelligent.",
+    "q_ko": "C:U SAW-12에 대한 기록은 뭐라고 해?",
+    "a_ko": "탄도 연구 부서의 메모에서는 SAW-12가 튼튼하지만 통제하기 어렵고 지능이 낮다고 불평해.",
+    "source": "user-upload:EN.json.txt:pdaNotes.20"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-wasteteleport",
+    "q_en": "How is waste mentioned in C:U teleportation documents?",
+    "a_en": "A teleportation memo refers to using public waste for calibration testing and disposing of sensitive objects.",
+    "q_ko": "C:U 순간이동 연구에서 폐기물을 사용한 이유는?",
+    "a_ko": "순간이동 부서 기록은 일반 폐기물을 보정 실험에 활용하면서 민감한 물체를 처리하는 수단으로도 사용했다고 말해.",
+    "source": "user-upload:EN.json.txt:pdaNotes.21"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-victims",
+    "q_en": "How did some C:U survivors arrive according to notes?",
+    "a_en": "A survivor note says victims were incapacitated with a dart and forced into pods to be sent to the planet.",
+    "q_ko": "C:U 생존자들은 어떻게 행성으로 보내졌대?",
+    "a_ko": "한 생존자 메모는 다트에 맞아 의식을 잃은 뒤 강제로 포드에 실려 행성으로 보내졌다고 증언해.",
+    "source": "user-upload:EN.json.txt:notes.0"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-redblood",
+    "q_en": "What do notes say opens some bio-terminals in C:U?",
+    "a_en": "One survivor note claims certain boxes connected to computers require red blood, specifically, to be opened.",
+    "q_ko": "C:U에서 붉은 피가 필요한 상자가 있어?",
+    "a_ko": "한 생존자 메모에 따르면 컴퓨터가 연결된 특정 상자는 노란 피가 아니라 붉은 피를 흘려야 열려.",
+    "source": "user-upload:EN.json.txt:notes.2"
+  },
+  {
+    "game": "Casualties: Unknown",
+    "id": "lore-heatplant",
+    "q_en": "How can a survivor deal with freezing environments in C:U notes?",
+    "a_en": "A survivor note recommends avoiding getting wet and using heat-emitting plants and machines while moving through cold areas.",
+    "q_ko": "C:U 추운 지형에서 생존자가 권한 방법은?",
+    "a_ko": "생존자 메모에서는 젖지 않도록 하고 열을 내는 식물이나 기계 사이를 이동해 추위를 피하라고 기록해.",
+    "source": "user-upload:EN.json.txt:notes.6"
   }
 ]
