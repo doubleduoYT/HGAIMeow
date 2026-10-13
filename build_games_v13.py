@@ -61,18 +61,18 @@ def build(en, ko, facts):
                     continue
                 group = f"cu:{section}:{key}"
                 if language == "en":
-                    answer = f"In Casualties: Unknown, {label}: {description}"
+                    answer = f"In Casualties: Unknown, {label} is described as follows: {description}"
                     questions = [
                         f"What is {label} in Casualties: Unknown?",
                         f"How is {label} described in C:U?",
                         f"Tell me about {label} in the game Casualties: Unknown.",
                     ]
                 else:
-                    answer = f"Casualties: Unknown에서 {label}: {description}"
+                    answer = f"C:U에 나오는 {label}의 게임 내 설명은 이래: {description}"
                     questions = [
-                        f"Casualties: Unknown에서 {label}은 뭐야?",
+                        f"C:U에서 {label}에 대해 알려줘.",
                         f"C:U에 나오는 {label} 설명해줘.",
-                        f"게임 속 {label}은 어떤 물건이나 상태야?",
+                        f"{label}의 게임 내 효과나 설명은 뭐야?",
                     ]
                 for question in questions:
                     dataset.append(row(group, key, language, question, answer, f"user-upload:{language}:{section}.{key_desc}"))
@@ -82,7 +82,7 @@ def build(en, ko, facts):
                 ko_name = clean(k[key], 100)
                 if en_name and ko_name and en_name.lower() != ko_name.lower():
                     group = f"cu:{section}:{key}"
-                    dataset.append(row(group, key, "ko", f"C:U에서 {en_name}을 한국어로 뭐라고 해?", f"제공된 한국어 번역에서는 {en_name}을(를) '{ko_name}'이라고 표기해.", f"user-upload:aligned:{section}.{key}"))
+                    dataset.append(row(group, key, "ko", f"C:U에서 {en_name}을 한국어로 뭐라고 해?", f"제공된 한국어 번역에서 영어 이름 {en_name}의 한국어 표기는 '{ko_name}'이야.", f"user-upload:aligned:{section}.{key}"))
                     dataset.append(row(group, key, "en", f"What is the Korean localization of {en_name} in C:U?", f"The supplied Korean localization calls {en_name} '{ko_name}'.", f"user-upload:aligned:{section}.{key}"))
                     summary["aligned_names"] += 1
 
