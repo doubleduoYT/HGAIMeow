@@ -16,7 +16,7 @@ def is_english_question(q):
 def system_text_for_question(q):
  return SYSTEM_TEXT_EN if is_english_question(q) else SYSTEM_TEXT
 FALLBACK_RESPONSE="잘 모르겠다냥 새로 배우고 싶다냥 :3"
-FALLBACK_RESPONSE_EN="I can\u0027t answer that reliably yet, meow. Could you clarify what you need?"
+FALLBACK_RESPONSE_EN="I can't answer that reliably yet, meow. Could you clarify what you need?"
 def fallback_for_question(question):return FALLBACK_RESPONSE_EN if is_english_question(question) else FALLBACK_RESPONSE
 SPECIAL=["<pad>","<unk>","<|system|>","<|user|>","<|context|>","<|assistant|>","<|end|>"]
 PRESETS={
