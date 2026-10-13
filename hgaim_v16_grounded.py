@@ -45,7 +45,7 @@ INTENT_RULES = [
     ("Casualties: Unknown", "lore-saw03", r"(?<![A-Za-z0-9])saw[-_ ]?0?3(?![A-Za-z0-9])", r"털|색|외형|모습|특징|fur|color|colour|appearance|look"),
     ("Casualties: Unknown", "lore-yellowblood", r"노란\s*(?:피|혈액)|yellow\s*blood", r"방사선|회복|재생|복구|치유|특징|저항|radiation|heal|repair|regenerat|remarkable|special"),
     ("Gunsaw", "developer", r"(?<![A-Za-z0-9])gunsaw(?![A-Za-z0-9])", r"개발자|제작자|만든\s*사람|누가\s*만들|who\s*(?:made|created|developed)|developer|creator|developed\s+by"),
-    ("Roblox", "scripting", r"로블록스|(?<![A-Za-z0-9])roblox(?![A-Za-z0-9])", r"스크립트|프로그래밍\s*언어|개발\s*언어|\bluau\b|scripting|programming\s+language|script\s+language"),
+    ("Roblox", "scripting", r"로블록스|(?<![A-Za-z0-9])roblox(?![A-Za-z0-9])", r"스크립트|프로그래밍\s*언어|개발\s*언어|무슨\s*언어|어떤\s*언어|\bluau\b|scripting|programming\s+language|script\s+language|what\s+language"),
     ("ADOFAI", "mechanic", r"얼불춤|(?<![A-Za-z0-9])adofai(?![A-Za-z0-9])|a dance of fire and ice", r"조작|박자|행성|천체|공전|리듬|타이밍|눌러|입력|mechanic|one.button|orbital|planet|timing|rhythm|beat|control|play"),
     ("Changed", "puro", r"(?<![A-Za-z0-9])puro(?![A-Za-z0-9])", r"누구|뭐|어떤|인물|캐릭터|정체|who|what|role|character|colin|콜린|describe"),
     ("DevilConnection", "identity", r"(?<![A-Za-z0-9])devil\s*connection(?![A-Za-z0-9])", r"세계관|공식|설정|뭐|무슨|어떤|게임|소개|정체|lore|official|setting|game|what|about"),
@@ -94,6 +94,8 @@ def _normalized(text):
 
 def find_fact(question: str, *, facts_path: str = "game_facts_v13.json"):
     if not question.strip(): return None
+    if is_open_ended_request(question):
+        return None
     registry=load_facts(facts_path)
     games=detect_games(question)
     # The existing Gunsaw relation card covers an explicit comparison of two
@@ -104,7 +106,10 @@ def find_fact(question: str, *, facts_path: str = "game_facts_v13.json"):
             return registry.get(("Gunsaw", "relation"))
         return None
     # Ignore intent mismatches that would confidently return the wrong fact.
-    excluded=re.search(r"성우|목소리|더빙|voice\s+actor|voice\s+of|발매일|출시일|release\s+date|price|가격|비용",question,re.I)
+    excluded=re.search(
+        r"성우|목소리|더빙|voice\s+actor|voice\s+of|발매일|출시일|release\s+date|price|가격|비용|"
+        r"레벨\s*에디터.{0,18}(?:누가|만들|제작자|개발자)|level\s+editor.{0,28}(?:who|made|creator|developer)",
+        question, re.I)
     for game,identifier,subject,intent in INTENT_RULES:
         if excluded or game not in games or not re.search(subject,question,re.I) or not re.search(intent,question,re.I):
             continue
@@ -132,14 +137,16 @@ def find_fact(question: str, *, facts_path: str = "game_facts_v13.json"):
         return scored[0][1]
     return None
 
+def is_open_ended_request(question: str) -> bool:
+    return bool(re.search(
+        r"추천|아이디어|뭐\s*만들|뭘\s*만들|만들면\s*좋|어떻게\s*만들|입문|연습|사용법|도와|"
+        r"suggest|recommend|ideas?|how\s+(?:can|should)\s+i\s+(?:build|make|start)",
+        question, re.I))
+
 def is_game_fact_request(question: str) -> bool:
-    if not detect_games(question):
-        return False
-    # Open-ended advice is best handled by the conversational model. Returning
-    # 'no verified lore' to a build/creative suggestion is a routing bug.
-    if re.search(r"추천|아이디어|뭐\\s*만들|뭘\\s*만들|어떻게\\s*만들|입문|연습|도와|suggest|recommend|ideas?|how\\s+(?:can|should)\\s+i\\s+(?:build|make|start)", question, re.I):
-        return False
-    return bool(FACT_QUESTION.search(question))
+    return bool(detect_games(question) and
+                not is_open_ended_request(question) and
+                FACT_QUESTION.search(question))
 
 def grounded_answer(question: str, *, facts_path: str = "game_facts_v13.json", unknown_policy: str = "abstain") -> Optional[dict]:
     """Return an answer with provenance or None for neural-only questions.
