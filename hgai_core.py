@@ -230,6 +230,7 @@ def neural_generate(model,tok,device,cfg,user,context=None,history=None,temperat
  if seed is not None:rg=torch.Generator(device=device);rg.manual_seed(int(seed))
  if is_english_question(user):
   foreign=torch.tensor([bool(re.search(r"[가-힣]",word)) for word in tok.vocab],device=device,dtype=torch.bool)
+  single_letter=torch.tensor([bool(re.fullmatch(r"[A-Za-z]",word)) and word not in {"I","a","A"} for word in tok.vocab],device=device,dtype=torch.bool)
  else:
   user_latin={w.casefold() for w in re.findall(r"[A-Za-z][A-Za-z0-9_+#.-]*",user)}
   foreign=torch.tensor([bool(re.search(r"[A-Za-z]",word)) and word.casefold() not in user_latin and word not in SPECIAL for word in tok.vocab],device=device,dtype=torch.bool)
@@ -237,7 +238,11 @@ def neural_generate(model,tok,device,cfg,user,context=None,history=None,temperat
  for _ in range(max_new_tokens):
   z=model(idx[:,-cfg["block_size"]:])[0][:,-1].float()
   for i in set(gen[-64:]):v=z[0,i];z[0,i]=torch.where(v<0,v*repetition_penalty,v/repetition_penalty)
-  z[0,foreign]-=2.0
+  z[0,[tok.pad,tok.unk]+[tok.stoi[k] for k in SPECIAL if k not in {"<|end|>","<pad>","<unk>"}]]=-float("inf")
+  if is_english_question(user):
+   z[0,foreign | single_letter]=-float("inf")
+  else:
+   z[0,foreign]-=1.4
   z/=max(.05,float(temperature))
   if top_k:
    v,_=torch.topk(z,min(top_k,z.size(-1)));z[z<v[:,-1,None]]=-float("inf")
