@@ -1,0 +1,68 @@
+name: HGAIM v16.1 Source Routing Reliability
+
+on:
+  push:
+    branches: [feature/hgaim-v16-1-routing-reliability]
+    paths:
+      - hgaim_v16_grounded.py
+      - hgaim_v16_client.py
+      - hgaim_v14_client.py
+      - nyang_style_v14.py
+      - test_v16_1_routing.py
+      - .github/workflows/test_v16_1_routing.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: hgaim-v16-1-routing-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile all local-only routing modules
+        run: |
+          python -m py_compile hgaim_v16_grounded.py hgaim_v16_client.py hgaim_v15_client.py hgaim_v14_client.py nyang_style_v14.py test_v16_1_routing.py
+
+      - name: Run original and additional adversarial source-routing tests
+        run: |
+          python -m unittest -v test_v14_style test_v16_grounded test_v16_1_routing
+
+      - name: Print machine-readable routing demo with no model server
+        run: |
+          python - <<'PY'
+          import json
+          from hgaim_v16_client import answer
+          h=[{"role":"user","content":"Gunsaw는 어떤 게임이야?"}]
+          tasks=[
+              ("C:U의 OSPREY는 무엇을 옮겨?",[]),
+              ("Gunsaw와 C:U의 관계가 뭐야?",[]),
+              ("그 게임 개발자는 누구야?",h),
+              ("Roblox에서 사용하는 프로그래밍 언어는 뭐야?",[]),
+              ("Gunsaw의 출시일은 언제야?",[]),
+          ]
+          records=[dict(question=q,**answer(q,history=hist,metadata=True,url="http://127.0.0.1:1")) for q,hist in tasks]
+          assert [r["route"] for r in records]==["source","source","source","source","abstain"]
+          with open("V16_1_ROUTING_DEMO.json","w",encoding="utf8") as f:
+              json.dump({"kind":"offline source facts, not neural generation","examples":records},f,ensure_ascii=False,indent=2)
+          print(json.dumps(records,ensure_ascii=False,indent=2))
+          PY
+
+      - name: Upload regression demonstration
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hgaim-v16-1-routing-verification-${{ github.run_number }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: V16_1_ROUTING_DEMO.json
