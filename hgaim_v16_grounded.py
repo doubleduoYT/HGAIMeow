@@ -17,13 +17,15 @@ from typing import Optional
 
 from nyang_style_v14 import nyangify
 
+MODULE_DIR = Path(__file__).resolve().parent
+
 GAME_ALIASES = {
-    "Casualties: Unknown": (r"casualties\s*:\s*unknown", r"\bc\s*:\s*u\b", r"(?<![A-Za-z0-9])saw[-_ ]?0[0-9](?![A-Za-z0-9])", r"(?<![A-Za-z0-9])osprey(?![A-Za-z0-9])", r"노란\s*(?:피|혈액)", r"\byellow blood\b"),
+    "Casualties: Unknown": (r"casualties\s*:\s*unknown", r"(?<![A-Za-z0-9])c\s*:\s*u(?![A-Za-z0-9])", r"(?<![A-Za-z0-9])saw[-_ ]?0[0-9](?![A-Za-z0-9])", r"(?<![A-Za-z0-9])osprey(?![A-Za-z0-9])", r"노란\s*(?:피|혈액)", r"\byellow blood\b"),
     "Minecraft": (r"마인크래프트", r"(?<![A-Za-z0-9])minecraft(?![A-Za-z0-9])"),
     "Roblox": (r"로블록스", r"(?<![A-Za-z0-9])roblox(?![A-Za-z0-9])"),
     "ADOFAI": (r"얼불춤", r"(?<![A-Za-z0-9])adofai(?![A-Za-z0-9])", r"a dance of fire and ice"),
     "Gunsaw": (r"(?<![A-Za-z0-9])gunsaw(?![A-Za-z0-9])",),
-    "Changed": (r"(?<![A-Za-z0-9])changed(?![A-Za-z0-9])", r"(?<![A-Za-z0-9])puro(?![A-Za-z0-9])", r"\bdr\.\s*k\b"),
+    "Changed": (r"(?<![A-Za-z0-9])puro(?![A-Za-z0-9])", r"\bdr\.\s*k\b"),
     "DevilConnection": (r"(?<![A-Za-z0-9])devil\s*connection(?![A-Za-z0-9])",),
     "Terraria": (r"테라리아", r"(?<![A-Za-z0-9])terraria(?![A-Za-z0-9])"),
 }
@@ -55,13 +57,27 @@ def language_of(text: str) -> str:
     return "ko" if re.search(r"[가-힣]", text) else "en"
 
 def detect_games(text: str):
-    if re.search(r"\bi\s+changed\b|\bchanged\s+my\b",text,re.I) and not re.search(r"\bpuro\b|\bgame\b|게임",text,re.I):
-        text=re.sub(r"\bchanged\b","",text,flags=re.I)
-    return [game for game,patterns in GAME_ALIASES.items() if any(re.search(p,text,re.I) for p in patterns)]
+    # 'changed' is an ordinary English verb. Recognize the game only by a
+    # title-cased proper noun or explicit game-specific context.
+    found = [game for game, patterns in GAME_ALIASES.items()
+             if any(re.search(pattern, text, re.I) for pattern in patterns)]
+    named_changed = bool(re.search(r"(?<![A-Za-z0-9])Changed(?![A-Za-z0-9])", text))
+    verb_changed = bool(re.search(r"\\bi\\s+changed\\b|\\bchanged\\s+(?:my|the|our|a|an)\\b", text, re.I))
+    game_context = bool(re.search(r"\\b(?:the\\s+game|game|puro|colin)\\b|게임|주인공", text, re.I))
+    if ((named_changed and (not verb_changed or game_context)) or
+            (game_context and re.search(r"\\bchanged\\b", text, re.I))):
+        if "Changed" not in found:
+            found.append("Changed")
+    return found
 
 @lru_cache(maxsize=4)
 def load_facts(path: str = "game_facts_v13.json"):
-    data=json.loads(Path(path).read_text(encoding="utf-8"))
+    source = Path(path)
+    # The daemon may have an unrelated WorkingDirectory. Always anchor the
+    # bundled default registry to this Python module, not the current shell.
+    if path == "game_facts_v13.json":
+        source = MODULE_DIR / source
+    data=json.loads(source.read_text(encoding="utf-8"))
     if not isinstance(data,list): raise ValueError("Expected fact list")
     result={}
     for item in data:
@@ -80,10 +96,22 @@ def find_fact(question: str, *, facts_path: str = "game_facts_v13.json"):
     if not question.strip(): return None
     registry=load_facts(facts_path)
     games=detect_games(question)
+    # The existing Gunsaw relation card covers an explicit comparison of two
+    # games. All other multi-game fact questions are left unresolved.
+    if len(games) > 1:
+        if (set(games) == {"Gunsaw", "Casualties: Unknown"} and
+                re.search(r"관계|관련|공통|차이|연결|비슷|relation|related|linked|connect|similar|between|difference", question, re.I)):
+            return registry.get(("Gunsaw", "relation"))
+        return None
     # Ignore intent mismatches that would confidently return the wrong fact.
     excluded=re.search(r"성우|목소리|더빙|voice\s+actor|voice\s+of|발매일|출시일|release\s+date|price|가격|비용",question,re.I)
     for game,identifier,subject,intent in INTENT_RULES:
         if excluded or game not in games or not re.search(subject,question,re.I) or not re.search(intent,question,re.I):
+            continue
+        # The presence of an item name alone does not prove that a generic
+        # description answers a request for specific construction instructions.
+        if (identifier == "redstone" and
+                re.search(r"회로도|회로\\s*설계|설치법|제작법|step.by.step|tutorial|wiring|배선", question, re.I)):
             continue
         item=registry.get((game,identifier))
         if item:return item
@@ -105,7 +133,13 @@ def find_fact(question: str, *, facts_path: str = "game_facts_v13.json"):
     return None
 
 def is_game_fact_request(question: str) -> bool:
-    return bool(detect_games(question) and FACT_QUESTION.search(question))
+    if not detect_games(question):
+        return False
+    # Open-ended advice is best handled by the conversational model. Returning
+    # 'no verified lore' to a build/creative suggestion is a routing bug.
+    if re.search(r"추천|아이디어|뭐\\s*만들|뭘\\s*만들|어떻게\\s*만들|입문|연습|도와|suggest|recommend|ideas?|how\\s+(?:can|should)\\s+i\\s+(?:build|make|start)", question, re.I):
+        return False
+    return bool(FACT_QUESTION.search(question))
 
 def grounded_answer(question: str, *, facts_path: str = "game_facts_v13.json", unknown_policy: str = "abstain") -> Optional[dict]:
     """Return an answer with provenance or None for neural-only questions.
