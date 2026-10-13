@@ -1,0 +1,114 @@
+name: HGAIM v11.1 Dialogue-Aware Training
+
+on:
+  push:
+    branches:
+      - feature/hgaim-v11-neural-first
+    paths:
+      - train_neural_v11_1.py
+      - train_dialogues_v11_1_extra.jsonl
+      - validate_dialogues_v11_1.jsonl
+      - evaluate_neural_v11.py
+      - hgai_core.py
+      - .github/workflows/train_neural_v11_1.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hgaim-v11-1-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Validate sources and held-out dataset isolation
+        run: |
+          python -m py_compile hgai_core.py train_v10_quality.py train_neural_v11.py train_neural_v11_1.py evaluate_neural_v11.py
+          python build_dataset.py --max-variants 12
+          python - <<'PY'
+          from train_neural_v11_1 import read_dialogues, ensure_holdout
+          from train_neural_v11 import dialogue_examples
+          train = read_dialogues(['train_dialogues_v11.jsonl', 'train_dialogues_v11_1_extra.jsonl'])
+          val = dialogue_examples('validate_dialogues_v11_1.jsonl')
+          ensure_holdout(train, val)
+          assert len(train) >= 180 and len(val) >= 30
+          print('PASS: train=', len(train), 'held-out=', len(val))
+          PY
+
+      - name: Download compatible Preview 4 checkpoint
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v10.1.0-bilingual-preview.4 --repo "${{ github.repository }}" --pattern hgai_model_v10_preview.pth --dir .
+          test -s hgai_model_v10_preview.pth
+
+      - name: Smoke test full trainer and checkpoint format
+        run: |
+          python train_neural_v11_1.py --steps 2 --eval-every 1 --model-file /tmp/hgaim_smoke_v11_1.pth
+          python - <<'PY'
+          from hgai_core import checkpoint_load
+          c = checkpoint_load('/tmp/hgaim_smoke_v11_1.pth')
+          assert c['version'] == 'hgai-v10'
+          assert c['preset'] == 'main'
+          assert 'selection_dialogue_loss' in c
+          assert 'selected_improved_over_baseline' in c
+          assert c['model'] and c['resume_model']
+          print('PASS: valid v10-compatible v11.1 checkpoint')
+          PY
+
+      - name: Baseline independent generation
+        run: |
+          python evaluate_neural_v11.py --model-file hgai_model_v10_preview.pth --report V11_1_BASELINE_DIALOGUE.json
+
+      - name: Train candidate with held-out dialogue selection
+        run: |
+          python train_neural_v11_1.py --steps 1600 --eval-every 100 --threads 2 --lr 0.00005 --model-file hgai_model_v11_1.pth
+
+      - name: Evaluate candidate with separate unseen prompt set
+        run: |
+          python evaluate_neural_v11.py --model-file hgai_model_v11_1.pth --report V11_1_DIALOGUE_EVAL.json
+          python evaluate_neural_v10.py --model-file hgai_model_v11_1.pth --min-pass 0 --report V11_1_KO_RAW.json
+          python evaluate_bilingual_v10.py --mode raw-neural --model-file hgai_model_v11_1.pth --min-pass 0 --report V11_1_EN_RAW.json
+          python run_hgai.py --model-file hgai_model_v11_1.pth --mode raw-neural --once "왜 게임이 멈추는지 같이 살펴볼 수 있어?"
+
+      - name: Print selection outcomes
+        run: |
+          python - <<'PY'
+          import json
+          s = json.load(open('hgai_model_v11_1.training.json', encoding='utf-8'))
+          b = json.load(open('V11_1_BASELINE_DIALOGUE.json', encoding='utf-8'))
+          n = json.load(open('V11_1_DIALOGUE_EVAL.json', encoding='utf-8'))
+          print('SELECTED STEP:', s['selected_step'])
+          print('HELDOUT DIALOGUE LOSS:', s['baseline_dialogue_loss'], '->', s['chosen_dialogue_loss'])
+          print('INDEPENDENT GENERATION: fallback:', b['fallback_dialogues'], '->', n['fallback_dialogues'])
+          print('INDEPENDENT GENERATION: English/Korean mixing:', b['english_with_korean'], '->', n['english_with_korean'])
+          print('Automated scores do not certify natural conversation quality.')
+          PY
+
+      - name: Upload candidate and diagnostic reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hgaim-v11-1-dialogue-aware-${{ github.run_number }}
+          path: |
+            hgai_model_v11_1.pth
+            hgai_model_v11_1.training.json
+            V11_1_BASELINE_DIALOGUE.json
+            V11_1_DIALOGUE_EVAL.json
+            V11_1_KO_RAW.json
+            V11_1_EN_RAW.json
+          retention-days: 30
+          if-no-files-found: warn
