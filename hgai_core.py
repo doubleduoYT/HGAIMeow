@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 from build_dataset import CURATED_FACTS,curated_pairs,expand_pairs,is_obsolete_pair,parse_pairs
+from hgaim_v16_context import resolve_followup
+from hgaim_v16_grounded import detect_games, grounded_answer
+from nyang_style_v14 import nyangify
 
 BASE_DIR=Path(__file__).resolve().parent
 SYSTEM_TEXT="너는 HGAI다냥. 한국어로 정확하고 자연스럽게 답하고 말끝에 냥을 자연스럽게 붙인다냥. 모르는 사실은 지어내지 않는다냥."
@@ -258,7 +261,7 @@ class HGAIEngine:
   if m:self.user_name=m.group(1);return f"기억했다냥 이제 {self.user_name}라고 부르겠다냥 :3"
   if re.search(r"내\s*이름.*(뭐|기억)",q):return f"네 이름은 {self.user_name}다냥" if hasattr(self,"user_name") else "아직 이름을 못 들었다냥"
  def _save(self,q,a):self.history.append((q,a));self.history=self.history[-8:]
- def reply(self,user,mode="hybrid",temperature=.72,top_k=40,top_p=.92,max_new_tokens=96):
+ def _legacy_reply(self,user,mode="hybrid",temperature=.72,top_k=40,top_p=.92,max_new_tokens=96):
   q=clean_text(user)
   if not q:return "냥? 뭔가 말해줘라냥 :3"
   if mode=="raw-neural":
@@ -283,4 +286,33 @@ class HGAIEngine:
    g=neural_generate(self.model,self.tok,self.device,self.cfg,q,None,self.history,temperature,top_k,top_p,max_new_tokens)
    if quality_ok(g):self._save(q,g);return fix_nyang(g)
   a=FALLBACK_RESPONSE;self._save(q,a);return a
+ def reply(self,user,mode="hybrid",temperature=.72,top_k=40,top_p=.92,max_new_tokens=96):
+  """Maintain v10 checkpoint/API compatibility; route reviewed game facts locally.
+
+  Raw-neural remains a direct model quality test, not factual retrieval.
+  There are no new model/server/network dependencies.
+  """
+  q=clean_text(user)
+  if mode!="raw-neural" and q:
+   previous=[{"role":"user","content":prior_q} for prior_q,_ in self.history[-4:]]
+   clarified=resolve_followup(q,previous)
+   fact=grounded_answer(clarified,unknown_policy="neural")
+   if fact and fact["route"]=="source":
+    a=fact["answer"];self._save(q,a);return a
+   # Refuse unsupported exact dates and developer ages. General questions
+   # retain the original v10 curated/retriever/neural behavior.
+   if detect_games(clarified) and re.search(
+       r"출시일|발매일|출시\\s*연도|출시\\s*날짜|발매\\s*연도|몇\\s*살|나이|생년월일|"
+       r"\\b(?:release\\s+date|birthday|how\\s+old|date\\s+of\\s+birth)\\b",
+       clarified,re.I):
+    unknown=grounded_answer(clarified,unknown_policy="abstain")
+    if unknown and unknown["route"]=="abstain":
+     self._save(q,unknown["answer"]);return unknown["answer"]
+  a=self._legacy_reply(user,mode,temperature,top_k,top_p,max_new_tokens)
+  if mode=="raw-neural" or not q or a==FALLBACK_RESPONSE:
+   return a
+  lang="en" if is_english_question(q) else "ko"
+  styled=nyangify(a,lang)
+  if self.history and self.history[-1][0]==q:self.history[-1]=(q,styled)
+  return styled
  def model_info(self):return {"version":"hgai-v10","preset":self.preset,"runtime_pairs":len(self.pairs),"model_loaded":self.model is not None,"params":count_params(self.model),"neural_ready":self.neural_ready,"checkpoint":self.checkpoint_meta,"device":self.device,"external_model_required":False}
