@@ -113,7 +113,7 @@ def find_fact(question: str, *, facts_path: str = "game_facts_v13.json"):
     # Mentioning a level editor is NOT evidence of who created that editor.
     editor_authorship = (
         bool(re.search(r"레벨\s*에디터|level\s+editor", question, re.I)) and
-        bool(re.search(r"누가|만들|제작자|개발자|who|made|created|developer|creator", question, re.I))
+        bool(re.search(r"누가|만들|만든|제작자|개발자|who|made|created|developer|creator", question, re.I))
     )
     if editor_authorship:
         return None
