@@ -1,0 +1,57 @@
+name: HGAIM v16.1 Stable Source-Router Integration
+
+on:
+  push:
+    branches:
+      - release/hgaim-v16-1-source-router
+      - main
+    paths:
+      - hgai_core.py
+      - game_facts_v13.json
+      - hgaim_v16_grounded.py
+      - hgaim_v16_client.py
+      - hgaim_v14_client.py
+      - hgaim_v15_client.py
+      - nyang_style_v14.py
+      - test_v14_style.py
+      - test_v16_grounded.py
+      - test_v16_1_routing.py
+      - test_v16_stable_integration.py
+      - .github/workflows/test_v16_stable.yml
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hgaim-v16-stable-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile stable engine, offline router and clients
+        run: |
+          python -m py_compile hgai_core.py run_hgai.py hgaim_v16_grounded.py hgaim_v16_client.py nyang_style_v14.py test_v16_stable_integration.py
+
+      - name: Run all 36 offline regression and real-engine integration tests
+        run: |
+          python -m unittest -v test_v14_style test_v16_grounded test_v16_1_routing test_v16_stable_integration
+
+      - name: Run v10 command-line smoke tests with no model checkpoint
+        run: |
+          python run_hgai.py --once "Gunsaw 개발자는 누구야?" | tee /tmp/gunsaw.txt
+          grep -q "Orsoniks" /tmp/gunsaw.txt
+          python run_hgai.py --once "C:U의 OSPREY는 뭘 옮겨?" | tee /tmp/cu.txt
+          grep -q "건물 전체" /tmp/cu.txt
+          python run_hgai.py --once "Who developed Gunsaw?" | tee /tmp/en.txt
+          grep -q "Orsoniks" /tmp/en.txt

@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 from build_dataset import CURATED_FACTS,curated_pairs,expand_pairs,is_obsolete_pair,parse_pairs
+from hgaim_v16_grounded import grounded_answer
+from hgaim_v16_client import resolve_followup
+from nyang_style_v14 import nyangify
 
 BASE_DIR=Path(__file__).resolve().parent
 SYSTEM_TEXT="너는 HGAI다냥. 한국어로 정확하고 자연스럽게 답하고 말끝에 냥을 자연스럽게 붙인다냥. 모르는 사실은 지어내지 않는다냥."
@@ -258,14 +261,30 @@ class HGAIEngine:
   if m:self.user_name=m.group(1);return f"기억했다냥 이제 {self.user_name}라고 부르겠다냥 :3"
   if re.search(r"내\s*이름.*(뭐|기억)",q):return f"네 이름은 {self.user_name}다냥" if hasattr(self,"user_name") else "아직 이름을 못 들었다냥"
  def _save(self,q,a):self.history.append((q,a));self.history=self.history[-8:]
- def reply(self,user,mode="hybrid",temperature=.72,top_k=40,top_p=.92,max_new_tokens=96):
+ def _reply_core(self,user,mode="hybrid",temperature=.72,top_k=40,top_p=.92,max_new_tokens=96):
   q=clean_text(user)
   if not q:return "냥? 뭔가 말해줘라냥 :3"
   if mode=="raw-neural":
    g=neural_generate(self.model,self.tok,self.device,self.cfg,q,None,self.history,temperature,top_k,top_p,max_new_tokens) if self.model else None;a=fix_nyang(g) if quality_ok(g) else FALLBACK_RESPONSE;self._save(q,a);return a
-  for fn in (self.remember_rule,calculator_reply,curated_direct_reply):
+  # Preserve private memory/calculator behavior before game routing.
+  for fn in (self.remember_rule,calculator_reply):
    a=fn(q)
    if a:self._save(q,a);return a
+  if mode in ("hybrid","search"):
+   # Use only the last four user turns; do not guess between two game titles.
+   turns=[{"role":"user","content":u} for u,_ in self.history[-4:]]
+   resolved=resolve_followup(q,turns)
+   source=grounded_answer(resolved,unknown_policy="neural")
+   if source and source["route"]=="source":
+    a=source["answer"];self._save(q,a);return a
+  a=curated_direct_reply(q)
+  if a:self._save(q,a);return a
+  if mode in ("hybrid","search"):
+   # Explicitly refuse unsupported precise biographical/commercial assertions.
+   if re.search(r"출시일|발매일|출시\\s*연도|가격|비용|성우|나이|몇\\s*살|\\brelease\\s+date\\b|\\bprice\\b|\\bvoice\\s+actor\\b|\\bhow\\s+old\\b",resolved,re.I):
+    candidate=grounded_answer(resolved,unknown_policy="abstain")
+    if candidate and candidate["route"]=="abstain":
+     a=candidate["answer"];self._save(q,a);return a
   ex=self.retriever.exact_answers(q)
   if ex:
    choices=[a for a in ex if not re.search(r"[가-힣]",a)] if is_english_question(q) else ex
@@ -283,4 +302,13 @@ class HGAIEngine:
    g=neural_generate(self.model,self.tok,self.device,self.cfg,q,None,self.history,temperature,top_k,top_p,max_new_tokens)
    if quality_ok(g):self._save(q,g);return fix_nyang(g)
   a=FALLBACK_RESPONSE;self._save(q,a);return a
+ def reply(self,user,mode="hybrid",temperature=.72,top_k=40,top_p=.92,max_new_tokens=96):
+  """Apply cat-speech only to user-facing modes, not raw-neural diagnostics."""
+  answer=self._reply_core(user,mode,temperature,top_k,top_p,max_new_tokens)
+  if mode=="raw-neural":return answer
+  lang="en" if is_english_question(user) else "ko"
+  styled=nyangify(answer,lang)
+  if self.history and self.history[-1][0]==clean_text(user):
+   self.history[-1]=(self.history[-1][0],styled)
+  return styled
  def model_info(self):return {"version":"hgai-v10","preset":self.preset,"runtime_pairs":len(self.pairs),"model_loaded":self.model is not None,"params":count_params(self.model),"neural_ready":self.neural_ready,"checkpoint":self.checkpoint_meta,"device":self.device,"external_model_required":False}

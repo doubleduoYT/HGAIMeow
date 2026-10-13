@@ -129,3 +129,43 @@ python evaluate_bilingual_v10.py --mode raw-neural --model-file hgai_model_v10_p
 The search/hybrid tests do not establish that the neural model can reason independently. Check the raw-neural Korean and English test reports separately. Preview checkpoints are marked `semantic_ready: false` unless their independent neural checks pass; hybrid mode then prioritizes retrieval by design.
 
 If you download the preview file from Releases, pass `--model-file hgai_model_v10_preview.pth` explicitly (the CLI's default checkpoint path is named `hgai_model_v10.pth`).
+
+
+## v16.1 stable game factuality backport (v10 engine compatible)
+
+**This release updates the runtime, not the neural weights.** The original small
+`hgai_model_v10.pth` checkpoint and `run_hgai.py` CLI are unchanged. The
+existing `hybrid` and `search` modes now check an offline reviewed source
+registry for supported game facts before using approximate retrieval or an
+unreliable neural guess.
+
+- Offline factual cards: `game_facts_v13.json` covering C:U research records,
+  Gunsaw, Roblox, Minecraft, ADOFAI, Changed and other reviewed games.
+- Game title detection handles Korean particles (e.g. `C:U의`, `Gunsaw라는`).
+- Unambiguous game follow-ups, such as `그 게임 개발자는?`, use the recent
+  local conversation history. Ambiguous multi-game context is not guessed.
+- Unsupported precise dates/prices/developer ages are not invented.
+- User-facing responses apply `nyang_style_v14.nyangify()`. The
+  `raw-neural` diagnostic remains **unchanged** to allow fair generation tests.
+- Extra local-only tools `hgaim_v16_client.py` / `hgaim_v15_client.py` are
+  optional research clients. They are **not** used for ordinary v10 inference.
+  The engine requires no Qwen model or llama.cpp server.
+
+Try it without a trained checkpoint:
+
+```bash
+python run_hgai.py --once "C:U의 OSPREY는 뭘 옮겨?"
+python run_hgai.py --once "Gunsaw 개발자는 누구야?"
+python run_hgai.py --once "Who developed Gunsaw?"
+python -m unittest -v test_v14_style test_v16_grounded test_v16_1_routing test_v16_stable_integration
+```
+
+For deployment on Raspberry Pi, do **not** overwrite the customized
+`run_hgai.py --serve` file or either Discord bot service. First verify the
+module files, game JSON and `hgai_core.py` are available in a backed-up test
+copy, run these tests, and only then decide whether to switch the service.
+No automated SSH deployment is included. Known v15 LoRA factual errors remain
+outside this v10 runtime upgrade; a source hit does not establish neural
+memorization or fluency.
+
+See `V16_STABLE_RELEASE.md` for the safety and compatibility checklist.
