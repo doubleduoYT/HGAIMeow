@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 
 import torch
-from hgai_core import HGAIEngine, FALLBACK_RESPONSE, is_english_question
+from hgai_core import HGAIEngine, FALLBACK_RESPONSE, FALLBACK_RESPONSE_EN
 
 TESTS=[
  ("한국어","오늘 좀 심심한데 뭐 할까?", "그중에서 음악 관련 활동이 좋아"),
@@ -44,7 +44,7 @@ def main():
    answers.append(a)
   english=lang=="English"
   language_mix=any(bool(re.search(r"[가-힣]",a)) for a in answers) if english else False
-  fixed_fallback=any(a==FALLBACK_RESPONSE for a in answers)
+  fixed_fallback=any(a in {FALLBACK_RESPONSE, FALLBACK_RESPONSE_EN} for a in answers)
   rows.append(dict(index=i+1,language=lang,prompts=[first,followup],answers=answers,
                    english_answer_contains_korean=language_mix,fixed_fallback=fixed_fallback))
  result={"mode":"raw-neural","model_file":args.model_file,"no_retrieval":True,
