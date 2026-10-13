@@ -18,14 +18,14 @@ from typing import Optional
 from nyang_style_v14 import nyangify
 
 GAME_ALIASES = {
-    "Casualties: Unknown": (r"casualties\s*:\s*unknown", r"\bc\s*:\s*u\b", r"\bsaw[-_ ]?0[0-9]\b", r"\bosprey\b", r"노란\s*(?:피|혈액)", r"\byellow blood\b"),
-    "Minecraft": (r"마인크래프트", r"\bminecraft\b"),
-    "Roblox": (r"로블록스", r"\broblox\b"),
-    "ADOFAI": (r"얼불춤", r"\badofai\b", r"a dance of fire and ice"),
-    "Gunsaw": (r"\bgunsaw\b",),
-    "Changed": (r"\bchanged\b", r"\bpuro\b", r"\bdr\.\s*k\b"),
-    "DevilConnection": (r"\bdevil\s*connection\b",),
-    "Terraria": (r"테라리아", r"\bterraria\b"),
+    "Casualties: Unknown": (r"casualties\s*:\s*unknown", r"\bc\s*:\s*u\b", r"(?<![A-Za-z0-9])saw[-_ ]?0[0-9](?![A-Za-z0-9])", r"(?<![A-Za-z0-9])osprey(?![A-Za-z0-9])", r"노란\s*(?:피|혈액)", r"\byellow blood\b"),
+    "Minecraft": (r"마인크래프트", r"(?<![A-Za-z0-9])minecraft(?![A-Za-z0-9])"),
+    "Roblox": (r"로블록스", r"(?<![A-Za-z0-9])roblox(?![A-Za-z0-9])"),
+    "ADOFAI": (r"얼불춤", r"(?<![A-Za-z0-9])adofai(?![A-Za-z0-9])", r"a dance of fire and ice"),
+    "Gunsaw": (r"(?<![A-Za-z0-9])gunsaw(?![A-Za-z0-9])",),
+    "Changed": (r"(?<![A-Za-z0-9])changed(?![A-Za-z0-9])", r"(?<![A-Za-z0-9])puro(?![A-Za-z0-9])", r"\bdr\.\s*k\b"),
+    "DevilConnection": (r"(?<![A-Za-z0-9])devil\s*connection(?![A-Za-z0-9])",),
+    "Terraria": (r"테라리아", r"(?<![A-Za-z0-9])terraria(?![A-Za-z0-9])"),
 }
 FACT_QUESTION = re.compile(
     r"누구|누가|뭐|무엇|어떤|알려|설명|목적|특징|이름|방법|언어|관계|왜|정체|언제|출시|연도|날짜|가격|얼마|몇|"
@@ -39,22 +39,24 @@ STYLE_UNKNOWN = {
 # Each rule requires both a game anchor and the exact fact intent. Unknown
 # questions about a related item deliberately do not return an unrelated fact.
 INTENT_RULES = [
-    ("Casualties: Unknown", "lore-osprey", r"\bosprey\b", r"옮기|운송|이동|순간이동|건물|목적|설계|어떤|뭐|what|move|transport|building|teleport|purpose|designed"),
-    ("Casualties: Unknown", "lore-saw03", r"\bsaw[-_ ]?0?3\b", r"털|색|외형|모습|특징|fur|color|colour|appearance|look"),
+    ("Casualties: Unknown", "lore-osprey", r"(?<![A-Za-z0-9])osprey(?![A-Za-z0-9])", r"옮기|운송|이동|순간이동|건물|목적|설계|어떤|뭐|what|move|transport|building|teleport|purpose|designed"),
+    ("Casualties: Unknown", "lore-saw03", r"(?<![A-Za-z0-9])saw[-_ ]?0?3(?![A-Za-z0-9])", r"털|색|외형|모습|특징|fur|color|colour|appearance|look"),
     ("Casualties: Unknown", "lore-yellowblood", r"노란\s*(?:피|혈액)|yellow\s*blood", r"방사선|회복|재생|복구|치유|특징|저항|radiation|heal|repair|regenerat|remarkable|special"),
-    ("Gunsaw", "developer", r"\bgunsaw\b", r"개발자|제작자|만든\s*사람|누가\s*만들|who\s*(?:made|created|developed)|developer|creator|developed\s+by"),
-    ("Roblox", "scripting", r"로블록스|\broblox\b", r"스크립트|프로그래밍\s*언어|개발\s*언어|\bluau\b|scripting|programming\s+language|script\s+language"),
-    ("ADOFAI", "mechanic", r"얼불춤|\badofai\b|a dance of fire and ice", r"조작|박자|행성|천체|공전|리듬|타이밍|눌러|입력|mechanic|one.button|orbital|planet|timing|rhythm|beat|control|play"),
-    ("Changed", "puro", r"\bpuro\b", r"누구|뭐|어떤|인물|캐릭터|정체|who|what|role|character|colin|콜린|describe"),
-    ("DevilConnection", "identity", r"\bdevil\s*connection\b", r"세계관|공식|설정|뭐|무슨|어떤|게임|소개|정체|lore|official|setting|game|what|about"),
-    ("Minecraft", "redstone", r"마인크래프트|\bminecraft\b", r"레드스톤|redstone"),
-    ("Terraria", "genre", r"테라리아|\bterraria\b", r"장르|어떤\s*게임|무슨\s*게임|genre|what kind|what is"),
+    ("Gunsaw", "developer", r"(?<![A-Za-z0-9])gunsaw(?![A-Za-z0-9])", r"개발자|제작자|만든\s*사람|누가\s*만들|who\s*(?:made|created|developed)|developer|creator|developed\s+by"),
+    ("Roblox", "scripting", r"로블록스|(?<![A-Za-z0-9])roblox(?![A-Za-z0-9])", r"스크립트|프로그래밍\s*언어|개발\s*언어|\bluau\b|scripting|programming\s+language|script\s+language"),
+    ("ADOFAI", "mechanic", r"얼불춤|(?<![A-Za-z0-9])adofai(?![A-Za-z0-9])|a dance of fire and ice", r"조작|박자|행성|천체|공전|리듬|타이밍|눌러|입력|mechanic|one.button|orbital|planet|timing|rhythm|beat|control|play"),
+    ("Changed", "puro", r"(?<![A-Za-z0-9])puro(?![A-Za-z0-9])", r"누구|뭐|어떤|인물|캐릭터|정체|who|what|role|character|colin|콜린|describe"),
+    ("DevilConnection", "identity", r"(?<![A-Za-z0-9])devil\s*connection(?![A-Za-z0-9])", r"세계관|공식|설정|뭐|무슨|어떤|게임|소개|정체|lore|official|setting|game|what|about"),
+    ("Minecraft", "redstone", r"마인크래프트|(?<![A-Za-z0-9])minecraft(?![A-Za-z0-9])", r"레드스톤|redstone"),
+    ("Terraria", "genre", r"테라리아|(?<![A-Za-z0-9])terraria(?![A-Za-z0-9])", r"장르|어떤\s*게임|무슨\s*게임|genre|what kind|what is"),
 ]
 
 def language_of(text: str) -> str:
     return "ko" if re.search(r"[가-힣]", text) else "en"
 
 def detect_games(text: str):
+    if re.search(r"\bi\s+changed\b|\bchanged\s+my\b",text,re.I) and not re.search(r"\bpuro\b|\bgame\b|게임",text,re.I):
+        text=re.sub(r"\bchanged\b","",text,flags=re.I)
     return [game for game,patterns in GAME_ALIASES.items() if any(re.search(p,text,re.I) for p in patterns)]
 
 @lru_cache(maxsize=4)
