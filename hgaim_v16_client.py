@@ -14,8 +14,8 @@ from hgaim_v16_grounded import grounded_answer, detect_games
 from hgaim_v15_client import ask as ask_neural
 
 FOLLOWUP = re.compile(
-    r"그\\s*(?:게임|사람|장비|개체|설정|건|거)|그럼|그리고|그러면|누가|개발자|어떤\\s*언어|무슨\\s*언어|"
-    r"털\\s*색|색깔|뭘\\s*옮|누구야|\\bwhat about\\b|\\bwho (?:made|developed|is)\\b|\\band what\\b|\\bwhat language\\b",
+    r"그\s*(?:게임|사람|장비|개체|설정|건|거)|그럼|그리고|그러면|누가|개발자|어떤\s*언어|무슨\s*언어|"
+    r"털\s*색|색깔|뭘\s*옮|누구야|\bwhat about\b|\bwho (?:made|developed|is)\b|\band what\b|\bwhat language\b",
     re.I,
 )
 
@@ -40,8 +40,8 @@ def resolve_followup(question, history):
     game=games[0]
     context_suffix=""
     if game=="Casualties: Unknown":
-        entity=re.search(r"\\bosprey\\b|\\bsaw[-_ ]?0?3\\b|노란\\s*(?:피|혈액)|yellow\\s+blood",prior,re.I)
-        if entity and re.search(r"그\\s*(?:장비|개체|피|혈액)|\\bit\\b|\\bthat\\b",question,re.I):
+        entity=re.search(r"\bosprey\b|\bsaw[-_ ]?0?3\b|노란\s*(?:피|혈액)|yellow\s+blood",prior,re.I)
+        if entity and re.search(r"그\s*(?:장비|개체|피|혈액)|\bit\b|\bthat\b",question,re.I):
             context_suffix=" "+entity.group(0)
     return game + context_suffix + " " + question
 
