@@ -40,7 +40,7 @@ def resolve_followup(question, history):
     game=games[0]
     context_suffix=""
     if game=="Casualties: Unknown":
-        entity=re.search(r"\bosprey\b|\bsaw[-_ ]?0?3\b|노란\s*(?:피|혈액)|yellow\s+blood",prior,re.I)
+        entity=re.search(r"(?<![A-Za-z0-9])osprey(?![A-Za-z0-9])|(?<![A-Za-z0-9])saw[-_ ]?0?3(?![A-Za-z0-9])|노란\s*(?:피|혈액)|yellow\s+blood",prior,re.I)
         if entity and re.search(r"그\s*(?:장비|개체|피|혈액)|\bit\b|\bthat\b",question,re.I):
             context_suffix=" "+entity.group(0)
     return game + context_suffix + " " + question
