@@ -1,0 +1,133 @@
+name: HGAIM v10.3 Train From Latest Main Model
+
+on:
+  push:
+    branches: [feature/hgaim-v10-3-latest-checkpoint-training]
+    paths:
+      - train_latest_v10_3.py
+      - .github/workflows/train_latest_v10_3.yml
+      - V10_3_TRAINING.md
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: hgaim-v10-3-latest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PyTorch for original HGAIM PyTorch model
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch
+
+      - name: Compile scripts and validate existing runtime game facts
+        run: |
+          python -m py_compile train_latest_v10_3.py hgai_core.py run_hgai.py
+          python -m unittest -v test_v16_stable_integration
+          python build_dataset.py --max-variants 12
+
+      - name: Fetch latest finished main-branch trained model
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p previous
+          gh run download 38484724746 --repo "${{ github.repository }}" --name hgai-v10-main --dir previous
+          cp previous/hgai_model_v10.pth hgai_model_latest_main.pth
+          python - <<'PY'
+          from hgai_core import checkpoint_load
+          c=checkpoint_load('hgai_model_latest_main.pth')
+          assert c and c['version']=='hgai-v10' and c['preset']=='main'
+          assert c['params']==4696832,c.get('params')
+          assert c.get('semantic_ready') is True
+          print('Verified actual latest stable model:',c.get('step'),c.get('params'),len(c['vocab']))
+          PY
+
+      - name: Minimal two-step warmstart training smoke
+        run: |
+          python train_latest_v10_3.py --init hgai_model_latest_main.pth --output /tmp/hgai_v10_3_smoke.pth --report /tmp/v10_3_smoke.json --steps 2 --threads 2
+
+      - name: Independent English and Korean BASELINE raw generation
+        run: |
+          python evaluate_neural_v10.py --model-file hgai_model_latest_main.pth --min-pass 0 --report V10_3_BASE_KO.json
+          python evaluate_bilingual_v10.py --mode raw-neural --model-file hgai_model_latest_main.pth --min-pass 0 --report V10_3_BASE_EN.json
+
+      - name: Continue the latest model with bilingual game knowledge
+        run: |
+          python train_latest_v10_3.py --init hgai_model_latest_main.pth --output hgai_model_v10_3_experimental.pth --report V10_3_TRAINING_REPORT.json --steps 1600 --lr 0.000015 --threads 2
+
+      - name: Independent English and Korean CANDIDATE raw generation
+        run: |
+          python evaluate_neural_v10.py --model-file hgai_model_v10_3_experimental.pth --min-pass 0 --report V10_3_TUNED_KO.json
+          python evaluate_bilingual_v10.py --mode raw-neural --model-file hgai_model_v10_3_experimental.pth --min-pass 0 --report V10_3_TUNED_EN.json
+          python evaluate_v10.py --mode hybrid --model-file hgai_model_v10_3_experimental.pth
+
+      - name: Select safe output without concealing a worse result
+        run: |
+          python - <<'PY'
+          import json, shutil, torch
+          from pathlib import Path
+          read=lambda p:json.loads(Path(p).read_text(encoding='utf-8'))
+          bko,beng=read('V10_3_BASE_KO.json'),read('V10_3_BASE_EN.json')
+          nko,neng=read('V10_3_TUNED_KO.json'),read('V10_3_TUNED_EN.json')
+          t=read('V10_3_TRAINING_REPORT.json')
+          # No false release based on train loss alone: look at unassisted generated text.
+          accepted=(t['selected_new_weights'] and nko['passed']>=max(7,bko['passed']-1)
+            and neng['passed']>=max(1,beng['passed']-1))
+          if accepted:
+            src='hgai_model_v10_3_experimental.pth'
+          else:
+            src='hgai_model_latest_main.pth'
+          shutil.copy2(src,'hgai_model_v10_3_safe.pth')
+          ck=torch.load('hgai_model_v10_3_safe.pth',map_location='cpu',weights_only=False)
+          # Semantic readiness is re-earned by the current output, not inherited.
+          ck['semantic_ready']=bool(nko['passed']>=7)
+          ck['raw_neural_gate']=bool(nko['passed']>=7)
+          ck['hybrid_gate']=True
+          ck['artifact_ready']=bool(nko['passed']>=7)
+          ck['raw_neural_passed']=nko['passed'] if accepted else bko['passed']
+          ck['raw_neural_total']=nko['total'] if accepted else bko['total']
+          ck['v10_3_safe_release_is_new_weights']=bool(accepted)
+          torch.save(ck,'hgai_model_v10_3_safe.pth')
+          report={
+            'train_source':'latest GitHub main v10 run 38484724746 artifact hgai-v10-main',
+            'attempted_steps':t['attempted_steps'],
+            'trained_new_weights_selected':t['selected_new_weights'],
+            'promoted_as_safe':bool(accepted),
+            'baseline_ko_raw':bko['passed'],'candidate_ko_raw':nko['passed'],
+            'baseline_en_raw':beng['passed'],'candidate_en_raw':neng['passed'],
+            'safe_file':'hgai_model_v10_3_safe.pth',
+            'experimental_file':'hgai_model_v10_3_experimental.pth',
+            'critical_caveat':'These keyword diagnostics do not certify overall fluency or game factuality. Experimental weights are separate from rollback-safe file.',
+          }
+          Path('V10_3_SELECTION.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          print(json.dumps(report,ensure_ascii=False,indent=2))
+          PY
+
+      - name: Upload both experimental weights and rollback-safe .pth
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hgaim-v10-3-latest-trained-${{ github.run_number }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            hgai_model_v10_3_experimental.pth
+            hgai_model_v10_3_safe.pth
+            V10_3_TRAINING_REPORT.json
+            V10_3_BASE_KO.json
+            V10_3_BASE_EN.json
+            V10_3_TUNED_KO.json
+            V10_3_TUNED_EN.json
+            V10_3_SELECTION.json
