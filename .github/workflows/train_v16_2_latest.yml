@@ -1,0 +1,148 @@
+name: HGAIM v16.2 Latest Checkpoint Game Continuation
+
+on:
+  push:
+    branches: [feature/hgaim-v16-2-continued-neural]
+    paths:
+      - train_v16_2_continued.py
+      - .github/workflows/train_v16_2_latest.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: hgai-v16-2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Get real latest finished main model and independent game datasets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p latest v13_game_data prior_game
+          gh run download 38484724746 --repo "${{ github.repository }}" --name hgai-v10-main --dir latest
+          test -s latest/hgai_model_v10.pth
+          gh run download 38380993661 --repo "${{ github.repository }}" --name hgaim-v13-bilingual-game-expert-3 --dir prior_game
+          cp prior_game/v13_game_data/game_qa_v13_train.jsonl v13_game_data/
+          cp prior_game/v13_game_data/game_qa_v13_holdout.jsonl v13_game_data/
+          test -s v13_game_data/game_qa_v13_train.jsonl
+          test -s v13_game_data/game_qa_v13_holdout.jsonl
+          ls -lh latest/hgai_model_v10.pth v13_game_data/*
+
+      - name: Install CPU PyTorch
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch
+
+      - name: Validate original checkpoint and source isolation
+        run: |
+          python -m py_compile hgai_core.py train_v10_quality.py train_v16_2_continued.py
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from hgai_core import checkpoint_load
+          ck=checkpoint_load("latest/hgai_model_v10.pth")
+          assert ck and ck["version"]=="hgai-v10" and ck["preset"]=="main"
+          assert ck["step"]>=1500 and ck.get("artifact_ready") is True
+          tr=[json.loads(s) for s in Path("v13_game_data/game_qa_v13_train.jsonl").read_text(encoding="utf-8").splitlines()]
+          va=[json.loads(s) for s in Path("v13_game_data/game_qa_v13_holdout.jsonl").read_text(encoding="utf-8").splitlines()]
+          assert len(tr)>2000 and len(va)>150
+          assert {r["group"] for r in tr}.isdisjoint({r["group"] for r in va})
+          print("VALIDATED latest checkpoint:",ck["step"],"params:",ck["params"])
+          print("GAME QA:",len(tr),"heldout:",len(va))
+          PY
+
+      - name: Two-step warm continuation smoke
+        run: |
+          python train_v16_2_continued.py --steps 2 --eval-every 1 --threads 2 --out /tmp/hgaim_v16_2_smoke.pth
+
+      - name: Train neural model on C:U and bilingual games
+        run: |
+          python train_v16_2_continued.py --steps 900 --eval-every 150 --lr 0.00004 --threads 2 --out hgai_model_v16_2.pth
+
+      - name: Evaluate raw neural and hybrid without confusing source lookup with learning
+        run: |
+          python evaluate_neural_v10.py --model-file hgai_model_v16_2.pth --min-pass 0 --report V16_2_KO_NEURAL.json
+          python evaluate_bilingual_v10.py --model-file hgai_model_v16_2.pth --mode raw-neural --min-pass 0 --report V16_2_EN_NEURAL.json
+          python evaluate_v10.py --mode hybrid --model-file hgai_model_v16_2.pth
+          python - <<'PY'
+          import json
+          from hgai_core import checkpoint_load,HGAIEngine
+          x=checkpoint_load("hgai_model_v16_2.pth")
+          assert x and x["trainer"]=="continued-v16.2-experimental"
+          assert x["source_training_run"]==38484724746
+          assert not x["semantic_ready"] and not x["artifact_ready"]
+          g=HGAIEngine(model_file="hgai_model_v16_2.pth")
+          assert g.model is not None
+          assert "Orsoniks" in g.reply("Who developed Gunsaw?")
+          assert "건물 전체" in g.reply("C:U의 OSPREY는 뭘 옮겨?")
+          print("PASS: compatible trained .pth, source-grounded practical responses")
+          r=json.load(open("V16_2_TRAINING_REPORT.json",encoding="utf-8"))
+          print("INDEPENDENT LOSS general",r["general_loss_baseline"],r["general_loss_candidate"])
+          print("INDEPENDENT LOSS game",r["game_loss_baseline"],r["game_loss_candidate"])
+          print("NEURAL SAMPLES",json.dumps(r["neural_probes"],ensure_ascii=False,indent=2))
+          print("NOT AUTOMATICALLY APPROVED for live Pi use")
+          PY
+
+      - name: Create reproducible download file and checksums
+        run: |
+          sha256sum hgai_model_v16_2.pth > V16_2_SHA256SUMS.txt
+          cat > V16_2_RELEASE_NOTES.md <<'EOF'
+          HGAIM v16.2 neural continuation research checkpoint (.pth).
+
+          - Direct continuation from the latest successful main branch trained v10 checkpoint, GitHub Actions run 38484724746.
+          - Adds C:U and game knowledge from the user-provided v13 bilingual localization/fact QAs; group-level train/heldout split.
+          - Existing CPU-friendly v10 architecture and vocabulary ID mapping preserved.
+          - New model independently checked in raw-neural Korean/English and v16.1 hybrid modes.
+          - IMPORTANT: experimental only; source router provides source-verified game answers. Neural fluency and arbitrary fact recall are not certified.
+          - semantic_ready=false. No Raspberry Pi or bot auto deployment.
+          - Download hgai_model_v16_2.pth and use --model-file hgai_model_v16_2.pth only for testing.
+          EOF
+          ls -lh hgai_model_v16_2.pth V16_2_TRAINING_REPORT.json V16_2_SHA256SUMS.txt
+
+      - name: Publish experimental model release for direct .pth download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="v16.2-neural-experiment-${{ github.run_number }}"
+          gh release create "$TAG" \
+            hgai_model_v16_2.pth \
+            V16_2_TRAINING_REPORT.json \
+            V16_2_KO_NEURAL.json \
+            V16_2_EN_NEURAL.json \
+            V16_2_SHA256SUMS.txt \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "HGAIM v16.2 Neural Game Experiment ${{ github.run_number }}" \
+            --notes-file V16_2_RELEASE_NOTES.md \
+            --prerelease --latest=false
+          echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
+          echo "Direct model download: https://github.com/${{ github.repository }}/releases/download/$TAG/hgai_model_v16_2.pth"
+
+      - name: Upload model and evidence as Actions artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hgaim-v16-2-trained-checkpoint-${{ github.run_number }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            hgai_model_v16_2.pth
+            V16_2_TRAINING_REPORT.json
+            V16_2_KO_NEURAL.json
+            V16_2_EN_NEURAL.json
+            V16_2_SHA256SUMS.txt
+            V16_2_RELEASE_NOTES.md
