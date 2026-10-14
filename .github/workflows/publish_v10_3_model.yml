@@ -1,0 +1,66 @@
+name: Publish trained HGAIM v10.3 .pth files
+
+on:
+  push:
+    branches: [feature/hgaim-v10-3-latest-checkpoint-training]
+    paths:
+      - .github/workflows/publish_v10_3_model.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait for verified latest-checkpoint finetuning
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run watch 38524946883 --repo "${{ github.repository }}" --exit-status --interval 15
+
+      - name: Download trained and rollback-safe real .pth checkpoints
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 38524946883 --repo "${{ github.repository }}" --name hgaim-v10-3-latest-trained-1 --dir result
+          test -s result/hgai_model_v10_3_experimental.pth
+          test -s result/hgai_model_v10_3_safe.pth
+          test -s result/V10_3_SELECTION.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('result/V10_3_SELECTION.json').read_text(encoding='utf8'))
+          print('Raw output baseline->trained Korean:',r['baseline_ko_raw'],r['candidate_ko_raw'])
+          print('Raw output baseline->trained English:',r['baseline_en_raw'],r['candidate_en_raw'])
+          print('Safe checkpoint uses new training:',r['promoted_as_safe'])
+          PY
+
+      - name: Publish explicitly experimental prerelease with direct downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'TXT'
+          # HGAIM v10.3 — latest main checkpoint fine-tuning
+          Latest stable main v10 model (run 38484724746) was loaded, and 1,600 additional steps were run on bilingual reviewed game facts and the original mixed training data.
+
+          Two separate checkpoints are available:
+          - **hgai_model_v10_3_experimental.pth**: the experimental fine-tuned candidate, or original checkpoint if no qualifying game validation improvement was found. NOT guaranteed to outperform baseline.
+          - **hgai_model_v10_3_safe.pth**: reselected safe checkpoint. May intentionally be identical in weights to the latest stable v10 base if raw-neural regression checks fail.
+
+          Read V10_3_SELECTION.json and V10_3_TRAINING_REPORT.json before deployment. Raw-neural Korean and English benchmarks are included and cannot establish full language fluency or factual accuracy.
+          The runtime implementation (v16.1) answers reviewed game facts from a local JSON source regardless of raw-neural model weaknesses. No Raspberry Pi bots were automatically modified. Keep custom run_hgai.py --serve.
+          TXT
+          gh release create v10.3-latest-trained-20261014 \
+            result/hgai_model_v10_3_experimental.pth \
+            result/hgai_model_v10_3_safe.pth \
+            result/V10_3_SELECTION.json \
+            result/V10_3_TRAINING_REPORT.json \
+            --target "${{ github.sha }}" \
+            --title "HGAIM v10.3 latest-main model continuation (experimental)" \
+            --notes-file notes.md \
+            --prerelease
