@@ -13,7 +13,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: hgai-v16-2-\${{ github.ref }}
+  group: hgai-v16-2-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -28,13 +28,13 @@ jobs:
 
       - name: Get real latest finished main model and independent game datasets
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           mkdir -p latest v13_game_data prior_game
-          gh run download 38484724746 --repo "\${{ github.repository }}" --name hgai-v10-main --dir latest
+          gh run download 38484724746 --repo "${{ github.repository }}" --name hgai-v10-main --dir latest
           test -s latest/hgai_model_v10.pth
-          gh run download 38380993661 --repo "\${{ github.repository }}" --name hgaim-v13-bilingual-game-expert-3 --dir prior_game
+          gh run download 38380993661 --repo "${{ github.repository }}" --name hgaim-v13-bilingual-game-expert-3 --dir prior_game
           cp prior_game/v13_game_data/game_qa_v13_train.jsonl v13_game_data/
           cp prior_game/v13_game_data/game_qa_v13_holdout.jsonl v13_game_data/
           test -s v13_game_data/game_qa_v13_train.jsonl
@@ -114,29 +114,29 @@ jobs:
 
       - name: Publish experimental model release for direct .pth download
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="v16.2-neural-experiment-\${{ github.run_number }}"
+          TAG="v16.2-neural-experiment-${{ github.run_number }}"
           gh release create "$TAG" \
             hgai_model_v16_2.pth \
             V16_2_TRAINING_REPORT.json \
             V16_2_KO_NEURAL.json \
             V16_2_EN_NEURAL.json \
             V16_2_SHA256SUMS.txt \
-            --repo "\${{ github.repository }}" \
-            --target "\${{ github.sha }}" \
-            --title "HGAIM v16.2 Neural Game Experiment \${{ github.run_number }}" \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "HGAIM v16.2 Neural Game Experiment ${{ github.run_number }}" \
             --notes-file V16_2_RELEASE_NOTES.md \
             --prerelease --latest=false
           echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
-          echo "Direct model download: https://github.com/\${{ github.repository }}/releases/download/$TAG/hgai_model_v16_2.pth"
+          echo "Direct model download: https://github.com/${{ github.repository }}/releases/download/$TAG/hgai_model_v16_2.pth"
 
       - name: Upload model and evidence as Actions artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: hgaim-v16-2-trained-checkpoint-\${{ github.run_number }}
+          name: hgaim-v16-2-trained-checkpoint-${{ github.run_number }}
           retention-days: 30
           if-no-files-found: warn
           path: |
